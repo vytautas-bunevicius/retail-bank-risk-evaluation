@@ -220,7 +220,4 @@ def create_pipeline(preprocessor: Pipeline, model: Pipeline) -> Pipeline:
     Returns:
     sklearn.pipeline.Pipeline: A scikit-learn Pipeline object that sequentially applies the preprocessor and the classifier.
     """
-    return Pipeline([
-        ('preprocessor', preprocessor),
-        ('classifier', model)
-    ])
+    return Pipeline([("preprocessor", preprocessor), ("classifier", model)])

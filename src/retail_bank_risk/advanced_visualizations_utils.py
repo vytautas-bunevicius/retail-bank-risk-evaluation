@@ -97,7 +97,7 @@ def shap_summary_plot(
             text="SHAP Feature Importance",
             x=0.5,
             xanchor="center",
-            font=dict(family="Styrene B", size=20, color="#191919")
+            font=dict(family="Styrene B", size=20, color="#191919"),
         ),
     )
 
@@ -407,7 +407,7 @@ def plot_roc_curve(
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
         width=1200,
-        height=500
+        height=500,
     )
     fig.show()
     if save_path:
@@ -445,7 +445,7 @@ def plot_precision_recall_curve(
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
         width=1200,
-        height=500
+        height=500,
     )
     fig.show()
     if save_path:
@@ -493,16 +493,18 @@ def plot_confusion_matrix(
         [1, PRIMARY_COLORS[0]],
     ]
 
-    fig = go.Figure(data=go.Heatmap(
-        z=cm,
-        x=labels or ["Not Transported", "Transported"],
-        y=labels or ["Not Transported", "Transported"],
-        hoverongaps=False,
-        text=text,
-        texttemplate="%{text}",
-        colorscale=colorscale,
-        showscale=False,
-    ))
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=cm,
+            x=labels or ["Not Transported", "Transported"],
+            y=labels or ["Not Transported", "Transported"],
+            hoverongaps=False,
+            text=text,
+            texttemplate="%{text}",
+            colorscale=colorscale,
+            showscale=False,
+        )
+    )
 
     axis_font = {"family": "Styrene A", "color": "#191919"}
 
@@ -587,7 +589,7 @@ def plot_learning_curve(
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
         width=1200,
-        height=500
+        height=500,
     )
     fig.show()
     if save_path:
