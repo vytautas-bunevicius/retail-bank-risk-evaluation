@@ -1,0 +1,13 @@
+{
+    "ignoreWords": [
+        "unbanked",
+        "Kaggle",
+        "xgboost",
+        "lightgbm",
+        "boxplots",
+        "importances"
+    ],
+    "words": [
+        "sweetviz"
+    ]
+}
