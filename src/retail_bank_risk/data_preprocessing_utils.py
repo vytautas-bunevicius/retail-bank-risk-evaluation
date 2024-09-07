@@ -19,9 +19,9 @@ tasks in machine learning pipelines, such as anomaly detection, missing data han
 """
 
 
+from collections import Counter
 from typing import List, Tuple
 
-from collections import Counter
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -98,6 +98,59 @@ def reduce_memory_usage_pl(
         print(f"Final data types: {Counter(df.dtypes)}")
 
     return df
+
+
+def initial_feature_reduction(
+    train_df: pl.DataFrame,
+    test_df: pl.DataFrame,
+    target_col: str,
+    missing_threshold: float = 0.5,
+    variance_threshold: float = 0.01,
+) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """
+    Reduces features in both training and testing datasets based on missing
+    value ratios and variance thresholds.
+
+    Args:
+        train_df (pl.DataFrame): Training DataFrame.
+        test_df (pl.DataFrame): Testing DataFrame.
+        target_col (str): The name of the target variable column.
+        missing_threshold (float): Maximum allowable missing value ratio for
+            retaining a column (default 0.5).
+        variance_threshold (float): Minimum variance required to retain a
+            column (default 0.01).
+
+    Returns:
+        tuple[pl.DataFrame, pl.DataFrame]: A tuple containing the reduced
+            training and testing DataFrames.
+    """
+    combined_df = pl.concat([train_df.drop(target_col), test_df])
+    total_rows = len(combined_df)
+    missing_ratios = combined_df.null_count() / total_rows
+    cols_to_keep = [
+        col
+        for col, ratio in zip(combined_df.columns, missing_ratios.to_numpy()[0])
+        if ratio <= missing_threshold
+    ]
+
+    filtered_df = combined_df.select(cols_to_keep)
+    numeric_cols = [
+        col
+        for col in filtered_df.columns
+        if filtered_df[col].dtype in [pl.Float64, pl.Int64]
+    ]
+    variances = {col: filtered_df[col].var() for col in numeric_cols}
+    variance_filtered_cols = [
+        col for col, var in variances.items() if var > variance_threshold
+    ]
+
+    final_cols = variance_filtered_cols + [
+        col for col in cols_to_keep if col not in numeric_cols
+    ]
+    reduced_train_df = train_df.select([target_col] + final_cols)
+    reduced_test_df = test_df.select(final_cols)
+
+    return reduced_train_df, reduced_test_df
 
 
 def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
