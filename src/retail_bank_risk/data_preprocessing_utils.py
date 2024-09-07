@@ -21,10 +21,83 @@ tasks in machine learning pipelines, such as anomaly detection, missing data han
 
 from typing import List, Tuple
 
+from collections import Counter
 import numpy as np
 import pandas as pd
+import polars as pl
 from scipy import stats
 from sklearn.pipeline import Pipeline
+
+
+def reduce_memory_usage_pl(
+    df: pl.DataFrame, verbose: bool = True
+) -> pl.DataFrame:
+    """Reduces memory usage of a Polars DataFrame by optimizing data types.
+
+    This function attempts to downcast numeric columns to the smallest possible
+    data type that can represent the data without loss of information. It also
+    converts string columns to categorical type.
+
+    Args:
+        df: A Polars DataFrame to optimize.
+        verbose: If True, print memory usage before and after optimization.
+
+    Returns:
+        A Polars DataFrame with optimized memory usage.
+
+    References:
+        Adapted from:
+        https://www.kaggle.com/code/demche/polars-memory-usage-optimization
+        Original pandas version:
+        https://www.kaggle.com/code/arjanso/reducing-dataframe-memory-size-by-65
+    """
+    if verbose:
+        print(f"Size before memory reduction: {df.estimated_size('mb'):.2f} MB")
+        print(f"Initial data types: {Counter(df.dtypes)}")
+
+    numeric_int_types = [pl.Int8, pl.Int16, pl.Int32, pl.Int64]
+    numeric_float_types = [pl.Float32, pl.Float64]
+
+    for col in df.columns:
+        col_type = df[col].dtype
+
+        if col_type in numeric_int_types:
+            c_min = df[col].min() * 10  # Prevent possible integer overflow
+            c_max = df[col].max() * 10
+
+            if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                new_type = pl.Int8
+            elif (
+                c_min > np.iinfo(np.int16).min
+                and c_max < np.iinfo(np.int16).max
+            ):
+                new_type = pl.Int16
+            elif (
+                c_min > np.iinfo(np.int32).min
+                and c_max < np.iinfo(np.int32).max
+            ):
+                new_type = pl.Int32
+            else:
+                new_type = pl.Int64
+
+            df = df.with_columns(df[col].cast(new_type))
+
+        elif col_type in numeric_float_types:
+            c_min, c_max = df[col].min(), df[col].max()
+            if (
+                c_min > np.finfo(np.float32).min
+                and c_max < np.finfo(np.float32).max
+            ):
+                df = df.with_columns(df[col].cast(pl.Float32))
+
+        elif col_type == pl.String:
+            df = df.with_columns(df[col].cast(pl.Categorical))
+
+    if verbose:
+        print(f"Size after memory reduction: {df.estimated_size('mb'):.2f} MB")
+        print(f"Final data types: {Counter(df.dtypes)}")
+
+    return df
 
 
 def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
