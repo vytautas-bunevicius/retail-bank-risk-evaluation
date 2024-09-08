@@ -29,7 +29,9 @@ from scipy import stats
 from sklearn.pipeline import Pipeline
 
 
-def reduce_memory_usage_pl(df: pl.DataFrame, verbose: bool = True) -> pl.DataFrame:
+def reduce_memory_usage_pl(
+    df: pl.DataFrame, verbose: bool = True
+) -> pl.DataFrame:
     """Reduces memory usage of a Polars DataFrame by optimizing data types.
 
     This function attempts to downcast numeric columns to the smallest possible
@@ -65,9 +67,15 @@ def reduce_memory_usage_pl(df: pl.DataFrame, verbose: bool = True) -> pl.DataFra
 
             if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
                 new_type = pl.Int8
-            elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+            elif (
+                c_min > np.iinfo(np.int16).min
+                and c_max < np.iinfo(np.int16).max
+            ):
                 new_type = pl.Int16
-            elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+            elif (
+                c_min > np.iinfo(np.int32).min
+                and c_max < np.iinfo(np.int32).max
+            ):
                 new_type = pl.Int32
             else:
                 new_type = pl.Int64
@@ -76,7 +84,10 @@ def reduce_memory_usage_pl(df: pl.DataFrame, verbose: bool = True) -> pl.DataFra
 
         elif col_type in numeric_float_types:
             c_min, c_max = df[col].min(), df[col].max()
-            if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+            if (
+                c_min > np.finfo(np.float32).min
+                and c_max < np.finfo(np.float32).max
+            ):
                 df = df.with_columns(df[col].cast(pl.Float32))
 
         elif col_type == pl.String:
@@ -95,51 +106,113 @@ def initial_feature_reduction(
     target_col: str,
     missing_threshold: float = 0.5,
     variance_threshold: float = 0.01,
-) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """
-    Reduces features in both training and testing datasets based on missing
-    value ratios and variance thresholds.
+    correlation_threshold: float = 0.05,
+) -> Tuple[pl.DataFrame, pl.DataFrame]:
+    """Reduces features based on missing values, variance, and correlation.
+
+    This function performs feature reduction on the input DataFrames based on
+    missing values, variance, and correlation with the target variable.
 
     Args:
-        train_df (pl.DataFrame): Training DataFrame.
-        test_df (pl.DataFrame): Testing DataFrame.
-        target_col (str): The name of the target variable column.
-        missing_threshold (float): Maximum allowable missing value ratio for
-            retaining a column (default 0.5).
-        variance_threshold (float): Minimum variance required to retain a
-            column (default 0.01).
+        train_df: Training DataFrame.
+        test_df: Testing DataFrame.
+        target_col: The name of the target variable column.
+        missing_threshold: Max allowable missing value ratio. Defaults to 0.5.
+        variance_threshold: Min variance required. Defaults to 0.01.
+        correlation_threshold: Min absolute correlation with target. Defaults to 0.05.
 
     Returns:
-        tuple[pl.DataFrame, pl.DataFrame]: A tuple containing the reduced
-            training and testing DataFrames.
+        A tuple containing the reduced train and test DataFrames.
+
+    Raises:
+        ValueError: If the target column is not in the training DataFrame.
     """
+    if target_col not in train_df.columns:
+        raise ValueError(
+            f"Target column '{target_col}' not found in training data."
+        )
+
     combined_df = pl.concat([train_df.drop(target_col), test_df])
     total_rows = len(combined_df)
-    missing_ratios = combined_df.null_count() / total_rows
-    cols_to_keep = [
+
+    cols_to_keep_missing = _filter_by_missing_values(
+        combined_df, total_rows, missing_threshold
+    )
+    filtered_df = combined_df.select(cols_to_keep_missing)
+
+    numeric_cols = _get_numeric_columns(filtered_df)
+    cols_to_keep_variance = _filter_by_variance(
+        filtered_df, numeric_cols, variance_threshold
+    )
+    cols_to_keep_correlation = _filter_by_correlation(
+        train_df, numeric_cols, target_col, correlation_threshold
+    )
+
+    final_cols = list(
+        set(cols_to_keep_missing)
+        & set(cols_to_keep_variance)
+        & set(cols_to_keep_correlation)
+    )
+    final_cols.extend(
+        [col for col in cols_to_keep_missing if col not in numeric_cols]
+    )
+
+    return (
+        train_df.select([target_col] + final_cols),
+        test_df.select(final_cols),
+    )
+
+
+def _filter_by_missing_values(
+    df: pl.DataFrame, total_rows: int, threshold: float
+) -> List[str]:
+    """Filters columns based on missing value ratio."""
+    missing_ratios = df.null_count() / total_rows
+    return [
         col
-        for col, ratio in zip(combined_df.columns, missing_ratios.to_numpy()[0])
-        if ratio <= missing_threshold
+        for col, ratio in zip(df.columns, missing_ratios.to_numpy()[0])
+        if ratio <= threshold
     ]
 
-    filtered_df = combined_df.select(cols_to_keep)
-    numeric_cols = [
+
+def _get_numeric_columns(df: pl.DataFrame) -> List[str]:
+    """Returns a list of numeric column names."""
+    numeric_types = (
+        pl.Float32,
+        pl.Float64,
+        pl.Int8,
+        pl.Int16,
+        pl.Int32,
+        pl.Int64,
+    )
+    return [col for col in df.columns if df[col].dtype in numeric_types]
+
+
+def _filter_by_variance(
+    df: pl.DataFrame, columns: List[str], threshold: float
+) -> List[str]:
+    """Filters columns based on variance."""
+    variances = df.select(columns).var().to_dict(as_series=False)
+    return [col for col, var in variances.items() if var[0] > threshold]
+
+
+def _filter_by_correlation(
+    df: pl.DataFrame, columns: List[str], target_col: str, threshold: float
+) -> List[str]:
+    """Filters columns based on correlation with the target variable."""
+
+    def correlation_with_target(col: str) -> float:
+        x = df[col].to_numpy()
+        y = df[target_col].to_numpy()
+        mask = ~np.isnan(x) & ~np.isnan(y)
+        return np.abs(np.corrcoef(x[mask], y[mask])[0, 1])
+
+    correlations = {col: correlation_with_target(col) for col in columns}
+    return ["amt_income_total"] + [
         col
-        for col in filtered_df.columns
-        if filtered_df[col].dtype in [pl.Float64, pl.Int64]
+        for col, corr in correlations.items()
+        if corr > threshold and col != "amt_income_total"
     ]
-    variances = {col: filtered_df[col].var() for col in numeric_cols}
-    variance_filtered_cols = [
-        col for col, var in variances.items() if var > variance_threshold
-    ]
-
-    final_cols = variance_filtered_cols + [
-        col for col in cols_to_keep if col not in numeric_cols
-    ]
-    reduced_train_df = train_df.select([target_col] + final_cols)
-    reduced_test_df = test_df.select(final_cols)
-
-    return reduced_train_df, reduced_test_df
 
 
 def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
@@ -179,7 +252,9 @@ def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
         anomalies_list.append(feature_anomalies)
 
     if anomalies_list:
-        anomalies = pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
+        anomalies = (
+            pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
+        )
         anomalies = anomalies[features]
     else:
         anomalies = pd.DataFrame(columns=features)
@@ -207,7 +282,9 @@ def flag_anomalies(df: pd.DataFrame, features: List[str]) -> pd.Series:
         lower_bound = first_quartile - 1.5 * interquartile_range
         upper_bound = third_quartile + 1.5 * interquartile_range
 
-        feature_anomalies = (df[feature] < lower_bound) | (df[feature] > upper_bound)
+        feature_anomalies = (df[feature] < lower_bound) | (
+            df[feature] > upper_bound
+        )
         anomaly_flags |= feature_anomalies
 
     return anomaly_flags
@@ -231,7 +308,9 @@ def calculate_cramers_v(x, y):
     return np.sqrt(chi2 / (n * min_dim))
 
 
-def get_top_missing_value_percentages(df: pl.DataFrame, top_n: int = 5) -> pl.DataFrame:
+def get_top_missing_value_percentages(
+    df: pl.DataFrame, top_n: int = 5
+) -> pl.DataFrame:
     """
     Calculates the percentage of missing values for each column in a Polars DataFrame
     and returns the top N columns with the highest percentage of missing values.
