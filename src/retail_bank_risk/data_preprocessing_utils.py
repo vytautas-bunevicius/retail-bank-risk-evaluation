@@ -29,9 +29,7 @@ from scipy import stats
 from sklearn.pipeline import Pipeline
 
 
-def reduce_memory_usage_pl(
-    df: pl.DataFrame, verbose: bool = True
-) -> pl.DataFrame:
+def reduce_memory_usage_pl(df: pl.DataFrame, verbose: bool = True) -> pl.DataFrame:
     """Reduces memory usage of a Polars DataFrame by optimizing data types.
 
     This function attempts to downcast numeric columns to the smallest possible
@@ -67,15 +65,9 @@ def reduce_memory_usage_pl(
 
             if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
                 new_type = pl.Int8
-            elif (
-                c_min > np.iinfo(np.int16).min
-                and c_max < np.iinfo(np.int16).max
-            ):
+            elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
                 new_type = pl.Int16
-            elif (
-                c_min > np.iinfo(np.int32).min
-                and c_max < np.iinfo(np.int32).max
-            ):
+            elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
                 new_type = pl.Int32
             else:
                 new_type = pl.Int64
@@ -84,10 +76,7 @@ def reduce_memory_usage_pl(
 
         elif col_type in numeric_float_types:
             c_min, c_max = df[col].min(), df[col].max()
-            if (
-                c_min > np.finfo(np.float32).min
-                and c_max < np.finfo(np.float32).max
-            ):
+            if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
                 df = df.with_columns(df[col].cast(pl.Float32))
 
         elif col_type == pl.String:
@@ -190,9 +179,7 @@ def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
         anomalies_list.append(feature_anomalies)
 
     if anomalies_list:
-        anomalies = (
-            pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
-        )
+        anomalies = pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
         anomalies = anomalies[features]
     else:
         anomalies = pd.DataFrame(columns=features)
@@ -220,9 +207,7 @@ def flag_anomalies(df: pd.DataFrame, features: List[str]) -> pd.Series:
         lower_bound = first_quartile - 1.5 * interquartile_range
         upper_bound = third_quartile + 1.5 * interquartile_range
 
-        feature_anomalies = (df[feature] < lower_bound) | (
-            df[feature] > upper_bound
-        )
+        feature_anomalies = (df[feature] < lower_bound) | (df[feature] > upper_bound)
         anomaly_flags |= feature_anomalies
 
     return anomaly_flags
@@ -246,67 +231,54 @@ def calculate_cramers_v(x, y):
     return np.sqrt(chi2 / (n * min_dim))
 
 
-def handle_missing_values(data, threshold=0.3):
+def get_top_missing_value_percentages(df: pl.DataFrame, top_n: int = 5) -> pl.DataFrame:
     """
-    This function handles missing values in a given DataFrame by dropping columns and rows.
-
-    Parameters:
-    data (pandas.DataFrame): The input DataFrame with missing values.
-    threshold (float, optional): The threshold for determining columns to drop. Default is 0.3.
-
-    Returns:
-    pandas.DataFrame: The cleaned DataFrame with missing values handled.
-    """
-    columns_to_drop = data.columns[data.isnull().mean() > threshold]
-    data_cleaned = data.drop(columns=columns_to_drop)
-    print(
-        f"Columns dropped due to >{threshold*100}% missing values: {list(columns_to_drop)}"
-    )
-
-    data_cleaned = data_cleaned.dropna()
-    print(
-        f"Rows removed due to missing values: {len(data) - len(data_cleaned)}"
-    )
-
-    return data_cleaned
-
-
-def simple_imputation(
-    train_data: pd.DataFrame, test_data: pd.DataFrame
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Perform simple imputation on missing values in training and testing datasets.
-
-    This function fills missing values in categorical columns with the mode (most frequent value)
-    and in numerical columns with the median value. The imputation is done separately for the
-    training and testing datasets.
+    Calculates the percentage of missing values for each column in a Polars DataFrame
+    and returns the top N columns with the highest percentage of missing values.
 
     Args:
-        train_data (pd.DataFrame): The training dataset containing missing values.
-        test_data (pd.DataFrame): The testing dataset containing missing values.
+        df: The Polars DataFrame to analyze for missing values.
+        top_n: The number of top columns to return (default is 5).
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: The training dataset with imputed values and the testing dataset with imputed values.
+        A Polars DataFrame with columns for column names and missing value percentages.
     """
-    train_data = train_data.copy()
-    test_data = test_data.copy()
+    total_rows = df.height
+    missing_counts = df.null_count().row(0)
+    missing_percentages = [
+        {"column": col, "missing_percentage": count / total_rows * 100}
+        for col, count in zip(df.columns, missing_counts)
+        if count > 0
+    ]
 
-    cat_labels = train_data.select_dtypes(
-        include=["object", "category", "bool"]
-    ).columns
-    num_labels = train_data.select_dtypes(include=["int64", "float64"]).columns
+    return (
+        pl.DataFrame(missing_percentages, orient="row")
+        .sort("missing_percentage", descending=True)
+        .with_columns(pl.col("missing_percentage").round(2))
+        .head(top_n)
+    )
 
-    for na in cat_labels:
-        train_data[na] = train_data[na].fillna(train_data[na].mode().iloc[0])
-        if na in test_data.columns:
-            test_data[na] = test_data[na].fillna(test_data[na].mode().iloc[0])
 
-    for na in num_labels:
-        train_data[na] = train_data[na].fillna(train_data[na].median())
-        if na in test_data.columns:
-            test_data[na] = test_data[na].fillna(test_data[na].median())
+def analyze_missing_values(
+    train_df: pl.DataFrame, test_df: pl.DataFrame, top_n: int = 5
+) -> None:
+    """
+    Analyzes and prints the top N columns with the highest percentage of missing values
+    for both train and test DataFrames.
 
-    return train_data, test_data
+    Args:
+        train_df: The training Polars DataFrame.
+        test_df: The testing Polars DataFrame.
+        top_n: The number of top columns to display (default is 5).
+    """
+    train_missing = get_top_missing_value_percentages(train_df, top_n)
+    test_missing = get_top_missing_value_percentages(test_df, top_n)
+
+    print(f"Top {top_n} columns with missing values in reduced train set:")
+    print(train_missing)
+
+    print(f"\nTop {top_n} columns with missing values in reduced test set:")
+    print(test_missing)
 
 
 def confidence_interval(
