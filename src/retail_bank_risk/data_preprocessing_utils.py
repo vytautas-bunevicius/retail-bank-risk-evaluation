@@ -107,11 +107,13 @@ def initial_feature_reduction(
     missing_threshold: float = 0.5,
     variance_threshold: float = 0.01,
     correlation_threshold: float = 0.05,
+    essential_features: List[str] = None,
 ) -> Tuple[pl.DataFrame, pl.DataFrame]:
     """Reduces features based on missing values, variance, and correlation.
 
     This function performs feature reduction on the input DataFrames based on
-    missing values, variance, and correlation with the target variable.
+    missing values, variance, and correlation with the target variable, while
+    ensuring that essential features are always retained.
 
     Args:
         train_df: Training DataFrame.
@@ -119,7 +121,10 @@ def initial_feature_reduction(
         target_col: The name of the target variable column.
         missing_threshold: Max allowable missing value ratio. Defaults to 0.5.
         variance_threshold: Min variance required. Defaults to 0.01.
-        correlation_threshold: Min absolute correlation with target. Defaults to 0.05.
+        correlation_threshold: Min absolute correlation with target.
+            Defaults to 0.05.
+        essential_features: List of features to always keep, regardless of
+            reduction criteria. Defaults to None.
 
     Returns:
         A tuple containing the reduced train and test DataFrames.
@@ -132,18 +137,25 @@ def initial_feature_reduction(
             f"Target column '{target_col}' not found in training data."
         )
 
+    essential_features = essential_features or []
+
     combined_df = pl.concat([train_df.drop(target_col), test_df])
     total_rows = len(combined_df)
 
     cols_to_keep_missing = _filter_by_missing_values(
-        combined_df, total_rows, missing_threshold
+        combined_df.drop(essential_features), total_rows, missing_threshold
     )
-    filtered_df = combined_df.select(cols_to_keep_missing)
+    filtered_df = combined_df.select(cols_to_keep_missing + essential_features)
 
     numeric_cols = _get_numeric_columns(filtered_df)
+    numeric_cols = [
+        col for col in numeric_cols if col not in essential_features
+    ]
+
     cols_to_keep_variance = _filter_by_variance(
         filtered_df, numeric_cols, variance_threshold
     )
+
     cols_to_keep_correlation = _filter_by_correlation(
         train_df, numeric_cols, target_col, correlation_threshold
     )
@@ -156,6 +168,7 @@ def initial_feature_reduction(
     final_cols.extend(
         [col for col in cols_to_keep_missing if col not in numeric_cols]
     )
+    final_cols.extend(essential_features)
 
     return (
         train_df.select([target_col] + final_cols),
@@ -166,7 +179,16 @@ def initial_feature_reduction(
 def _filter_by_missing_values(
     df: pl.DataFrame, total_rows: int, threshold: float
 ) -> List[str]:
-    """Filters columns based on missing value ratio."""
+    """Filters columns based on missing value ratio.
+
+    Args:
+        df: DataFrame to filter.
+        total_rows: Total number of rows in the DataFrame.
+        threshold: Maximum allowed ratio of missing values.
+
+    Returns:
+        List of column names that pass the missing value filter.
+    """
     missing_ratios = df.null_count() / total_rows
     return [
         col
@@ -176,7 +198,14 @@ def _filter_by_missing_values(
 
 
 def _get_numeric_columns(df: pl.DataFrame) -> List[str]:
-    """Returns a list of numeric column names."""
+    """Returns a list of numeric column names.
+
+    Args:
+        df: DataFrame to analyze.
+
+    Returns:
+        List of column names with numeric data types.
+    """
     numeric_types = (
         pl.Float32,
         pl.Float64,
@@ -191,7 +220,16 @@ def _get_numeric_columns(df: pl.DataFrame) -> List[str]:
 def _filter_by_variance(
     df: pl.DataFrame, columns: List[str], threshold: float
 ) -> List[str]:
-    """Filters columns based on variance."""
+    """Filters columns based on variance.
+
+    Args:
+        df: DataFrame containing the columns to filter.
+        columns: List of column names to consider.
+        threshold: Minimum required variance.
+
+    Returns:
+        List of column names that pass the variance filter.
+    """
     variances = df.select(columns).var().to_dict(as_series=False)
     return [col for col, var in variances.items() if var[0] > threshold]
 
@@ -199,9 +237,20 @@ def _filter_by_variance(
 def _filter_by_correlation(
     df: pl.DataFrame, columns: List[str], target_col: str, threshold: float
 ) -> List[str]:
-    """Filters columns based on correlation with the target variable."""
+    """Filters columns based on correlation with the target variable.
+
+    Args:
+        df: DataFrame containing the columns and target variable.
+        columns: List of column names to consider.
+        target_col: Name of the target column.
+        threshold: Minimum required absolute correlation.
+
+    Returns:
+        List of column names that pass the correlation filter.
+    """
 
     def correlation_with_target(col: str) -> float:
+        """Calculates absolute Pearson correlation with the target."""
         x = df[col].to_numpy()
         y = df[target_col].to_numpy()
         mask = ~np.isnan(x) & ~np.isnan(y)
