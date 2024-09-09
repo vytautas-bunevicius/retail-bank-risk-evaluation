@@ -9,7 +9,9 @@
     ],
     "words": [
         "dataframe",
+        "dtype",
         "dtypes",
+        "hstack",
         "interpretability",
         "overfitting",
         "sweetviz",

@@ -402,11 +402,17 @@ def analyze_missing_values(
     train_missing = get_top_missing_value_percentages(train_df, top_n)
     test_missing = get_top_missing_value_percentages(test_df, top_n)
 
-    print(f"Top {top_n} columns with missing values in reduced train set:")
-    print(train_missing)
+    if train_missing.is_empty():
+        print("No missing values found in the reduced train set.")
+    else:
+        print(f"Top {top_n} columns with missing values in reduced train set:")
+        print(train_missing)
 
-    print(f"\nTop {top_n} columns with missing values in reduced test set:")
-    print(test_missing)
+    if test_missing.is_empty():
+        print("No missing values found in the reduced test set.")
+    else:
+        print(f"\nTop {top_n} columns with missing values in reduced test set:")
+        print(test_missing)
 
 
 def confidence_interval(
