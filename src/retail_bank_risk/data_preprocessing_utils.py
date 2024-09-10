@@ -27,6 +27,7 @@ import pandas as pd
 import polars as pl
 from scipy import stats
 from sklearn.pipeline import Pipeline
+from sklearn.impute import KNNImputer
 
 
 def reduce_memory_usage_pl(
@@ -174,6 +175,100 @@ def initial_feature_reduction(
         train_df.select([target_col] + final_cols),
         test_df.select(final_cols),
     )
+
+
+def impute_numerical_features(train_df, test_df, target_col):
+    """Imputes missing values in numerical features using KNNImputer.
+
+    Args:
+        train_df: Polars DataFrame for the training set.
+        test_df: Polars DataFrame for the test set.
+        target_col: Name of the target column in the training set.
+
+    Returns:
+        Tuple of imputed training and test DataFrames.
+    """
+    if not train_df.shape[0] or not test_df.shape[0]:
+        print(
+            "Warning: One of the DataFrames is empty. Skipping numerical imputation."
+        )
+        return train_df, test_df
+
+    numerical_features = [
+        col
+        for col, dtype in zip(train_df.columns, train_df.dtypes)
+        if dtype
+        in (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.Float32, pl.Float64)
+        and col != target_col
+    ]
+
+    if not numerical_features:
+        print(
+            "Warning: No numerical features found. Skipping numerical imputation."
+        )
+        return train_df, test_df
+
+    imputer = KNNImputer(n_neighbors=5)
+
+    train_target = train_df[target_col]
+    train_features = train_df.drop(target_col)
+
+    train_numerical_pd = train_features[numerical_features].to_pandas()
+    test_numerical_pd = test_df[numerical_features].to_pandas()
+
+    train_numerical_imputed = imputer.fit_transform(train_numerical_pd)
+    test_numerical_imputed = imputer.transform(test_numerical_pd)
+
+    train_numerical_imputed_df = pl.DataFrame(
+        train_numerical_imputed, schema=numerical_features
+    )
+    test_numerical_imputed_df = pl.DataFrame(
+        test_numerical_imputed, schema=numerical_features
+    )
+
+    train_df = (
+        train_features.drop(numerical_features)
+        .hstack(train_numerical_imputed_df)
+        .with_columns(train_target)
+    )
+
+    test_df = test_df.drop(numerical_features).hstack(test_numerical_imputed_df)
+
+    return train_df, test_df
+
+
+def impute_categorical_features(train_df, test_df, target_col):
+    """Imputes missing values in categorical features using the mode.
+
+    Args:
+        train_df: Polars DataFrame for the training set.
+        test_df: Polars DataFrame for the test set.
+        target_col: Name of the target column in the training set.
+
+    Returns:
+        Tuple of imputed training and test DataFrames.
+    """
+    if not train_df.shape[0] or not test_df.shape[0]:
+        print(
+            "Warning: One of the DataFrames is empty. Skipping categorical imputation."
+        )
+        return train_df, test_df
+
+    categorical_features = [
+        col
+        for col, dtype in zip(train_df.columns, train_df.dtypes)
+        if dtype == pl.Categorical and col != target_col
+    ]
+
+    if not categorical_features:
+        print("Warning: No categorical features found. Skipping imputation.")
+        return train_df, test_df
+
+    for col in categorical_features:
+        train_df = train_df.with_columns(pl.col(col).fill_null("mode"))
+        test_df = test_df.with_columns(pl.col(col).fill_null("mode"))
+
+    return train_df, test_df
 
 
 def _filter_by_missing_values(
@@ -360,8 +455,7 @@ def calculate_cramers_v(x, y):
 def get_top_missing_value_percentages(
     df: pl.DataFrame, top_n: int = 5
 ) -> pl.DataFrame:
-    """
-    Calculates the percentage of missing values for each column in a Polars DataFrame
+    """Calculates the percentage of missing values for each column in a Polars DataFrame
     and returns the top N columns with the highest percentage of missing values.
 
     Args:
@@ -369,7 +463,8 @@ def get_top_missing_value_percentages(
         top_n: The number of top columns to return (default is 5).
 
     Returns:
-        A Polars DataFrame with columns for column names and missing value percentages.
+        pl.DataFrame: A Polars DataFrame with columns for column names and missing
+        value percentages.
     """
     total_rows = df.height
     missing_counts = df.null_count().row(0)
@@ -379,19 +474,21 @@ def get_top_missing_value_percentages(
         if count > 0
     ]
 
-    return (
-        pl.DataFrame(missing_percentages, orient="row")
-        .sort("missing_percentage", descending=True)
-        .with_columns(pl.col("missing_percentage").round(2))
-        .head(top_n)
-    )
+    if missing_percentages:
+        missing_df = pl.DataFrame(missing_percentages)
+        return (
+            missing_df.sort("missing_percentage", descending=True)
+            .with_columns(pl.col("missing_percentage").round(2))
+            .head(top_n)
+        )
+    else:
+        return pl.DataFrame()
 
 
 def analyze_missing_values(
     train_df: pl.DataFrame, test_df: pl.DataFrame, top_n: int = 5
 ) -> None:
-    """
-    Analyzes and prints the top N columns with the highest percentage of missing values
+    """Analyzes and prints the top N columns with the highest percentage of missing values
     for both train and test DataFrames.
 
     Args:
