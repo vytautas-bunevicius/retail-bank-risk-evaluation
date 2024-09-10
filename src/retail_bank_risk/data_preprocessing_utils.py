@@ -271,6 +271,15 @@ def impute_categorical_features(train_df, test_df, target_col):
     return train_df, test_df
 
 
+def count_duplicated_rows(dataframe: pl.DataFrame) -> None:
+    """
+    Count and print the number of duplicated rows in a Polars DataFrame
+    (based on all columns).
+    """
+    num_duplicated_rows = dataframe.is_duplicated().sum()
+    print(f"The DataFrame contains {num_duplicated_rows} duplicated rows.")
+
+
 def _filter_by_missing_values(
     df: pl.DataFrame, total_rows: int, threshold: float
 ) -> List[str]:
