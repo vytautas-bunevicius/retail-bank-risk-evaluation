@@ -533,8 +533,8 @@ def plot_confusion_matrix(
 
 def plot_learning_curve(
     estimator,
-    X: np.ndarray,
-    y: np.ndarray,
+    features: np.ndarray,
+    target: np.ndarray,
     cv: int = 5,
     n_jobs: int = -1,
     train_sizes: np.ndarray = np.linspace(0.1, 1.0, 5),
@@ -545,15 +545,20 @@ def plot_learning_curve(
 
     Args:
         estimator: The machine learning model to evaluate.
-        X: Feature matrix.
-        y: Target vector.
+        features: Feature matrix.
+        target: Target vector.
         cv: Number of cross-validation folds.
         n_jobs: Number of jobs to run in parallel.
         train_sizes: Array of training set sizes to evaluate.
         save_path: Optional path to save the plot image.
     """
     train_sizes, train_scores, test_scores = learning_curve(
-        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes
+        estimator,
+        features,
+        target,
+        cv=cv,
+        n_jobs=n_jobs,
+        train_sizes=train_sizes,
     )
 
     train_scores_mean = np.mean(train_scores, axis=1)
