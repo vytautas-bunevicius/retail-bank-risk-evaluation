@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from scipy import stats
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.impute import KNNImputer
 
@@ -559,3 +560,36 @@ def create_pipeline(preprocessor: Pipeline, model: Pipeline) -> Pipeline:
     sklearn.pipeline.Pipeline: A scikit-learn Pipeline object that sequentially applies the preprocessor and the classifier.
     """
     return Pipeline([("preprocessor", preprocessor), ("classifier", model)])
+
+
+def create_stratified_sample(
+    data: pl.DataFrame,
+    target_column: str,
+    sample_size: int,
+    random_state: int = 42,
+) -> pd.DataFrame:
+    """
+    Creates a stratified sample from a Polars DataFrame, preserving class proportions of the target variable.
+
+    Args:
+        data: The Polars DataFrame to sample from.
+        target_column: The name of the target variable column.
+        sample_size: The desired sample size.
+        random_state: Seed for the random number generator (for reproducibility).
+
+    Returns:
+        A Pandas DataFrame containing the stratified sample.
+    """
+
+    features_df = data.drop(target_column)
+    target_series = data[target_column]
+
+    _, sample_features, _, sample_target = train_test_split(
+        features_df.to_pandas(),
+        target_series.to_pandas(),
+        test_size=sample_size,
+        stratify=target_series.to_pandas(),
+        random_state=random_state,
+    )
+
+    return pd.concat([sample_features, sample_target], axis=1)
