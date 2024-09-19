@@ -1,6 +1,3 @@
-# cspell:disable
-# pylint:disable=line-too-long
-
 """
 This module provides a set of functions for creating and displaying various types of plots
 to visualize data distributions, feature importances, and correlations using Plotly.
@@ -126,8 +123,6 @@ def plot_combined_histograms(
         margin={"l": 50, "r": 50, "t": 80, "b": 80},
         font={**axis_font, "size": 12},
     )
-
-    fig.show()
 
     if save_path:
         fig.write_image(save_path)
@@ -484,7 +479,6 @@ def plot_categorical_features_by_target(
         None. The function displays the plot and optionally saves it to a file.
     """
     num_features = len(features)
-    # Determine the number of rows and columns based on the number of features
     if num_features == 1:
         rows, cols = 1, 1
     elif num_features == 2:
@@ -499,16 +493,15 @@ def plot_categorical_features_by_target(
         cols=cols,
         vertical_spacing=0.2,
         horizontal_spacing=0.1,
-        # Removed subplot_titles to prevent feature names from appearing at the top
     )
 
     axis_font = {"family": "Styrene A", "color": "#191919"}
-    colors = {0: PRIMARY_COLORS[0], 1: PRIMARY_COLORS[1]}
+    colors = {str(i): color for i, color in enumerate(PRIMARY_COLORS)}
 
     for i, feature in enumerate(features):
         row, col = (i // cols) + 1, (i % cols) + 1
         data = (
-            df.groupby([feature, target], observed=False)
+            df.groupby([feature, target], observed=True)
             .size()
             .unstack(fill_value=0)
         )
@@ -520,7 +513,7 @@ def plot_categorical_features_by_target(
                     x=data.index,
                     y=data_percentages[category],
                     name=f"{target} = {category}",
-                    marker_color=colors[category],
+                    marker_color=colors[str(category)],
                     text=[f"{v:.1f}%" for v in data_percentages[category]],
                     textposition="inside",
                     width=0.35,
@@ -727,7 +720,7 @@ def plot_single_bar_chart(
 
     value_counts = df[feature].value_counts(normalize=True).reset_index()
     value_counts.columns = [feature, "percentage"]
-    value_counts["percentage"] *= 100  # Convert to percentage
+    value_counts["percentage"] *= 100
 
     fig = go.Figure()
 
@@ -738,10 +731,8 @@ def plot_single_bar_chart(
             go.Bar(
                 x=[value],
                 y=[percentage],
-                name=f"{feature} = {value}",  # Updated legend label
-                marker_color=PRIMARY_COLORS[
-                    i % 2
-                ],  # Alternate between first two colors
+                name=f"{feature} = {value}",
+                marker_color=PRIMARY_COLORS[i % 2],
                 text=[f"{percentage:.1f}%"],
                 textposition="auto",
             )
@@ -789,8 +780,6 @@ def plot_single_bar_chart(
             font={**axis_font, "size": 12},
         ),
     )
-
     fig.show()
-
     if save_path:
         fig.write_image(save_path)

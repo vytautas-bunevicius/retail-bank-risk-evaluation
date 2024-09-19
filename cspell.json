@@ -9,6 +9,7 @@
     ],
     "words": [
         "appr",
+        "boxmean",
         "curr",
         "dataframe",
         "dtype",
@@ -18,11 +19,17 @@
         "hstack",
         "interpretability",
         "ipynb",
+        "nbins",
+        "nbinsx",
         "overfitting",
+        "showlegend",
         "sweetviz",
         "tickfont",
+        "tickvals",
         "underbanked",
         "vytautasbunevicius",
+        "xaxes",
+        "yaxes",
         "ydata"
     ]
 }
