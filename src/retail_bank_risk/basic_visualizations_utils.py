@@ -39,7 +39,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Constants
 BACKGROUND_COLOR = "#EEECE2"
 PRIMARY_COLORS = ["#CC7B5C", "#D4A27F", "#EBDBBC", "#9C8AA5"]
 PLOT_COLORS = ["#91A694", "#9C8AA5", "#CC7B5C"]
@@ -310,9 +309,7 @@ def plot_correlation_matrix(
         height=800,
         width=800,
         margin=dict(l=100, r=100, t=100, b=100),
-        xaxis=dict(
-            tickangle=-45, title_font=dict(size=18), tickfont=dict(size=14)
-        ),
+        xaxis=dict(tickangle=-45, title_font=dict(size=18), tickfont=dict(size=14)),
         yaxis=dict(title_font=dict(size=18), tickfont=dict(size=14)),
     )
 
@@ -500,11 +497,7 @@ def plot_categorical_features_by_target(
 
     for i, feature in enumerate(features):
         row, col = (i // cols) + 1, (i % cols) + 1
-        data = (
-            df.groupby([feature, target], observed=True)
-            .size()
-            .unstack(fill_value=0)
-        )
+        data = df.groupby([feature, target], observed=True).size().unstack(fill_value=0)
         data_percentages = data.div(data.sum(axis=1), axis=0) * 100
 
         for category in data.columns:
@@ -619,7 +612,6 @@ def plot_numeric_distributions(
         bin_width = (bin_edges[-1] - bin_edges[0]) / nbins
 
         for data, color, name in zip(hist_data, plot_colors, categories):
-            # Main bar with reduced opacity
             fig.add_trace(
                 go.Bar(
                     x=bin_edges[:-1],
@@ -634,7 +626,6 @@ def plot_numeric_distributions(
                 col=i + 1,
             )
 
-            # Edge highlight
             fig.add_trace(
                 go.Scatter(
                     x=bin_edges[:-1],
@@ -673,8 +664,8 @@ def plot_numeric_distributions(
         showlegend=True,
         legend=dict(
             orientation="v",
-            yanchor="middle",  # Changed from "top" to "middle"
-            y=0.5,  # Changed from 1 to 0.5 for vertical center
+            yanchor="middle",
+            y=0.5,
             xanchor="left",
             x=1.02,
             bgcolor="rgba(255,255,255,0.8)",
@@ -752,7 +743,7 @@ def plot_single_bar_chart(
         title_text="Percentage",
         title_font={**axis_font, "size": 14},
         tickfont={**axis_font, "size": 12},
-        range=[0, 100],  # Set y-axis range from 0 to 100
+        range=[0, 100],
     )
 
     fig.update_layout(

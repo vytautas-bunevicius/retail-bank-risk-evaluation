@@ -1,6 +1,3 @@
-# cspell:disable
-# pylint:disable=line-too-long
-
 """
 This module provides functions for evaluating machine learning models and extracting feature importances.
 
@@ -59,14 +56,11 @@ def evaluate_model(
     y_pred_proba = model.predict_proba(features)[:, 1]
 
     if target_recall is not None:
-        _, recalls, thresholds = precision_recall_curve(
-            true_labels, y_pred_proba
-        )
+        _, recalls, thresholds = precision_recall_curve(true_labels, y_pred_proba)
         idx = np.argmin(np.abs(recalls - target_recall))
         threshold = thresholds[idx]
         print(f"Adjusted threshold: {threshold:.4f}")
 
-    # Use the threshold if provided or adjusted, otherwise use default 0.5
     if threshold is not None:
         y_pred = (y_pred_proba >= threshold).astype(int)
     else:
@@ -75,21 +69,15 @@ def evaluate_model(
     if dataset_name:
         print(f"\nResults on {dataset_name} set:")
 
-    print(
-        classification_report(true_labels, y_pred, zero_division=1)
-    )  # Modified line
+    print(classification_report(true_labels, y_pred, zero_division=1))
     print("Confusion Matrix:")
     print(confusion_matrix(true_labels, y_pred))
     print(f"ROC AUC: {roc_auc_score(true_labels, y_pred_proba):.4f}")
     print(f"PR AUC: {average_precision_score(true_labels, y_pred_proba):.4f}")
     print(f"F1 Score: {f1_score(true_labels, y_pred, zero_division=1):.4f}")
-    print(
-        f"Precision: {precision_score(true_labels, y_pred, zero_division=1):.4f}"
-    )
+    print(f"Precision: {precision_score(true_labels, y_pred, zero_division=1):.4f}")
     print(f"Recall: {recall_score(true_labels, y_pred):.4f}")
-    print(
-        f"Balanced Accuracy: {balanced_accuracy_score(true_labels, y_pred):.4f}"
-    )
+    print(f"Balanced Accuracy: {balanced_accuracy_score(true_labels, y_pred):.4f}")
 
     return {
         "roc_auc": roc_auc_score(true_labels, y_pred_proba),
@@ -121,7 +109,6 @@ def extract_feature_importances(
     if hasattr(model, "feature_importances_"):
         return model.feature_importances_
     else:
-        # Calculate permutation importance
         permutation_import = permutation_importance(
             model, feature_data, target_data, n_repeats=30, random_state=42
         )

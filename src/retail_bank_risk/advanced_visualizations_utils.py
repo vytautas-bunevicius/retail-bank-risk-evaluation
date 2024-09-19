@@ -1,6 +1,3 @@
-# cspell:disable
-# pylint: disable=line-too-long
-
 """
 This module contains a collection of functions for visualizing and analyzing machine learning model performance,
 including SHAP values, model comparison metrics, and confusion matrices.
@@ -72,9 +69,7 @@ def shap_summary_plot(
     feature_importance = pd.DataFrame(
         {"feature": feature_names, "importance": shap_mean}
     )
-    feature_importance = feature_importance.sort_values(
-        "importance", ascending=True
-    )
+    feature_importance = feature_importance.sort_values("importance", ascending=True)
 
     fig = px.bar(
         feature_importance,
@@ -191,8 +186,7 @@ def plot_model_performance(
     """
     model_names = list(results.keys())
     data = {
-        metric: [results[name][metric] for name in model_names]
-        for metric in metrics
+        metric: [results[name][metric] for name in model_names] for metric in metrics
     }
 
     fig = go.Figure()
@@ -233,9 +227,7 @@ def plot_model_performance(
         paper_bgcolor=BACKGROUND_COLOR,
     )
 
-    fig.update_yaxes(
-        range=[0, 1], showgrid=True, gridwidth=1, gridcolor="LightGrey"
-    )
+    fig.update_yaxes(range=[0, 1], showgrid=True, gridwidth=1, gridcolor="LightGrey")
     fig.update_xaxes(tickangle=-45, tickfont={**axis_font, "size": 12})
 
     fig.show()
@@ -313,8 +305,8 @@ def plot_combined_confusion_matrices(
 
         heatmap = go.Heatmap(
             z=cm,
-            x=labels or ["No Stroke", "Stroke"],  # type: ignore
-            y=labels or ["No Stroke", "Stroke"],  # type: ignore
+            x=labels or ["No Stroke", "Stroke"],
+            y=labels or ["No Stroke", "Stroke"],
             hoverongaps=False,
             text=text,
             texttemplate="%{text}",
