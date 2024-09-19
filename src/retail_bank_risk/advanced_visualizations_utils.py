@@ -34,7 +34,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
-# Constants
 BACKGROUND_COLOR = "#EEECE2"
 PRIMARY_COLORS = ["#CC7B5C", "#D4A27F", "#EBDBBC", "#9C8AA5"]
 PLOT_COLORS = ["#91A694", "#9C8AA5", "#CC7B5C"]

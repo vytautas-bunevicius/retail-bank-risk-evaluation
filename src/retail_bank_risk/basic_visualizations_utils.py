@@ -560,7 +560,6 @@ def plot_categorical_features_by_target(
         ),
     )
 
-    fig.show()
     if save_path:
         fig.write_image(save_path)
 
@@ -771,6 +770,5 @@ def plot_single_bar_chart(
             font={**axis_font, "size": 12},
         ),
     )
-    fig.show()
     if save_path:
         fig.write_image(save_path)
