@@ -313,8 +313,6 @@ def plot_correlation_matrix(
         yaxis=dict(title_font=dict(size=18), tickfont=dict(size=14)),
     )
 
-    fig.show()
-
     if save_path:
         fig.write_image(save_path)
 
