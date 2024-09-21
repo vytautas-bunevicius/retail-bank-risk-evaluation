@@ -42,7 +42,7 @@ helping to gain insights into data structure, feature importance, and potential
 relationships between features.
 """
 
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -281,10 +281,10 @@ def plot_combined_boxplots(
         font={**axis_font, "size": 12},
     )
 
-    fig.show()
-
     if save_path:
         fig.write_image(save_path)
+
+    return fig
 
 
 def plot_correlation_matrix(
@@ -323,7 +323,9 @@ def plot_correlation_matrix(
         height=800,
         width=800,
         margin=dict(l=100, r=100, t=100, b=100),
-        xaxis=dict(tickangle=-45, title_font=dict(size=18), tickfont=dict(size=14)),
+        xaxis=dict(
+            tickangle=-45, title_font=dict(size=18), tickfont=dict(size=14)
+        ),
         yaxis=dict(title_font=dict(size=18), tickfont=dict(size=14)),
     )
 
@@ -515,7 +517,11 @@ def plot_categorical_features_by_target(
 
     for i, feature in enumerate(features):
         row, col = (i // cols) + 1, (i % cols) + 1
-        data = df.groupby([feature, target], observed=True).size().unstack(fill_value=0)
+        data = (
+            df.groupby([feature, target], observed=True)
+            .size()
+            .unstack(fill_value=0)
+        )
         data_percentages = data.div(data.sum(axis=1), axis=0) * 100
 
         for category in data.columns:
