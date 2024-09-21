@@ -1,16 +1,23 @@
 """
-This module provides functions for evaluating machine learning models and extracting feature importances.
+This module provides functions for evaluating machine learning models and
+extracting feature importances.
 
 Functions included:
-- `evaluate_model`: Evaluates the performance of a trained model using various metrics, including optional threshold adjustment.
-- `extract_feature_importances`: Extracts feature importances using permutation importance for models that do not provide them directly.
+- `evaluate_model`: Evaluates the performance of a trained model using various
+  metrics, including optional threshold adjustment.
+- `extract_feature_importances`: Extracts feature importances using
+  permutation importance for models that do not provide them directly.
 
 Key Features:
-- Evaluation metrics include ROC AUC, PR AUC, F1 Score, Precision, Recall, and Balanced Accuracy.
-- The `evaluate_model` function allows for adjusting the decision threshold based on a target recall.
-- The `extract_feature_importances` function uses permutation importance for models that lack direct feature importance attributes.
+- Evaluation metrics include ROC AUC, PR AUC, F1 Score, Precision, Recall,
+  and Balanced Accuracy.
+- The `evaluate_model` function allows for adjusting the decision threshold
+  based on a target recall.
+- The `extract_feature_importances` function uses permutation importance for
+  models that lack direct feature importance attributes.
 
-This module is intended for use in machine learning workflows to assess model performance and interpret feature importance.
+This module is intended for use in machine learning workflows to assess model
+performance and interpret feature importance.
 """
 
 from typing import Dict, Union
@@ -96,7 +103,8 @@ def extract_feature_importances(
     model, feature_data: pd.DataFrame, target_data: Union[pd.Series, np.ndarray]
 ) -> np.ndarray:
     """
-    Extract feature importances using permutation importance for models that do not directly provide them.
+    Extract feature importances using permutation importance for models that do
+    not directly provide them.
 
     Args:
         model: Trained model.

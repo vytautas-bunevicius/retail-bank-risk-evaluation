@@ -1,35 +1,12 @@
 {
-    "ignoreWords": [
-        "unbanked",
-        "Kaggle",
-        "xgboost",
-        "lightgbm",
-        "boxplots",
-        "importances"
+    "version": "0.2",
+    "ignorePaths": [
+        "*",
+        ".*"
     ],
-    "words": [
-        "appr",
-        "boxmean",
-        "curr",
-        "dataframe",
-        "dtype",
-        "dtypes",
-        "emergencystate",
-        "housetype",
-        "hstack",
-        "interpretability",
-        "ipynb",
-        "nbins",
-        "nbinsx",
-        "overfitting",
-        "showlegend",
-        "sweetviz",
-        "tickfont",
-        "tickvals",
-        "underbanked",
-        "vytautasbunevicius",
-        "xaxes",
-        "yaxes",
-        "ydata"
-    ]
+    "dictionaryDefinitions": [],
+    "dictionaries": [],
+    "words": [],
+    "ignoreWords": [],
+    "import": []
 }

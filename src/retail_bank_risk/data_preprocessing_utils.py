@@ -1,19 +1,28 @@
 """
-This module provides various functions for data preprocessing, anomaly detection, feature engineering,
-and statistical analysis, specifically tailored for machine learning workflows.
+This module provides various functions for data preprocessing, anomaly
+detection, feature engineering, and statistical analysis, specifically
+tailored for machine learning workflows.
 
 Functions included:
-- `detect_anomalies_iqr`: Detects anomalies in multiple features using the Interquartile Range (IQR) method.
+- `detect_anomalies_iqr`: Detects anomalies in multiple features using the
+  Interquartile Range (IQR) method.
 - `flag_anomalies`: Flags anomalies in specified features using the IQR method.
-- `calculate_cramers_v`: Computes Cramer's V statistic for categorical-categorical association.
-- `handle_missing_values`: Handles missing data by dropping columns or rows based on a threshold.
-- `simple_imputation`: Performs simple imputation on missing values in training and testing datasets.
-- `engineer_spaceship_features`: Performs feature engineering, particularly for a spaceship passenger dataset.
-- `confidence_interval`: Calculates the confidence interval for a given dataset.
-- `create_pipeline`: Creates a scikit-learn pipeline for preprocessing and modeling.
+- `calculate_cramers_v`: Computes Cramer's V statistic for
+  categorical-categorical association.
+- `handle_missing_values`: Handles missing data by dropping columns or rows
+  based on a threshold.
+- `simple_imputation`: Performs simple imputation on missing values in
+  training and testing datasets.
+- `engineer_spaceship_features`: Performs feature engineering, particularly
+  for a spaceship passenger dataset.
+- `confidence_interval`: Calculates the confidence interval for a given
+  dataset.
+- `create_pipeline`: Creates a scikit-learn pipeline for preprocessing and
+  modeling.
 
-This module is intended for use in data preprocessing and feature engineering, with functions designed to handle common
-tasks in machine learning pipelines, such as anomaly detection, missing data handling, and feature engineering.
+This module is intended for use in data preprocessing and feature engineering,
+with functions designed to handle common tasks in machine learning pipelines,
+such as anomaly detection, missing data handling, and feature engineering.
 """
 
 from collections import Counter
@@ -391,14 +400,17 @@ def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
 
 def flag_anomalies(df: pd.DataFrame, features: List[str]) -> pd.Series:
     """
-    Identify and flag anomalies in a DataFrame based on the Interquartile Range (IQR) method for specified features.
+    Identify and flag anomalies in a DataFrame based on the Interquartile Range
+    (IQR) method for specified features.
 
     Args:
         df (pd.DataFrame): The input DataFrame containing the data.
-        features (List[str]): A list of column names in the DataFrame to check for anomalies.
+        features (List[str]): A list of column names in the DataFrame to check for
+        anomalies.
 
     Returns:
-        pd.Series: A Series of boolean values where True indicates an anomaly in any of the specified features.
+        pd.Series: A Series of boolean values where True indicates an anomaly in
+        any of the specified features.
     """
     anomaly_flags = pd.Series(False, index=df.index)
 
@@ -494,14 +506,16 @@ def analyze_missing_values(
 def confidence_interval(
     data: List[float], confidence: float = 0.95
 ) -> Tuple[float, float, float]:
-    """Calculates the confidence interval for a given dataset.
+    """
+    Calculates the confidence interval for a given dataset.
 
     Args:
         data (List[float]): A list of numerical data points.
         confidence (float): The confidence level for the interval. Defaults to 0.95.
 
     Returns:
-        Tuple[float, float, float]: A tuple containing the mean, lower bound, and upper bound of the confidence interval.
+        Tuple[float, float, float]: A tuple containing the mean, lower bound, and
+        upper bound of the confidence interval.
     """
     array_data = np.array(data, dtype=float)
     sample_size = len(array_data)
@@ -522,12 +536,16 @@ def create_pipeline(preprocessor: Pipeline, model: Pipeline) -> Pipeline:
     Create a machine learning pipeline with a preprocessor and a classifier.
 
     Parameters:
-    preprocessor (sklearn.base.TransformerMixin): The preprocessing component of the pipeline.
-    model (sklearn.base.BaseEstimator): The classifier component of the pipeline.
+        preprocessor (sklearn.base.TransformerMixin): The preprocessing component
+        of the pipeline.
+        model (sklearn.base.BaseEstimator): The classifier component of the
+        pipeline.
 
     Returns:
-    sklearn.pipeline.Pipeline: A scikit-learn Pipeline object that sequentially applies the preprocessor and the classifier.
+        sklearn.pipeline.Pipeline: A scikit-learn Pipeline object that sequentially
+        applies the preprocessor and the classifier.
     """
+
     return Pipeline([("preprocessor", preprocessor), ("classifier", model)])
 
 
@@ -538,7 +556,8 @@ def create_stratified_sample(
     random_state: int = 42,
 ) -> pd.DataFrame:
     """
-    Creates a stratified sample from a Polars DataFrame, preserving class proportions of the target variable.
+    Creates a stratified sample from a Polars DataFrame, preserving class
+    proportions of the target variable.
 
     Args:
         data: The Polars DataFrame to sample from.
@@ -549,7 +568,6 @@ def create_stratified_sample(
     Returns:
         A Pandas DataFrame containing the stratified sample.
     """
-
     features_df = data.drop(target_column)
     target_series = data[target_column]
 

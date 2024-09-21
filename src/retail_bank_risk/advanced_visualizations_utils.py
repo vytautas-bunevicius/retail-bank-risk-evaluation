@@ -1,25 +1,33 @@
 """
-This module contains a collection of functions for visualizing and analyzing machine learning model performance,
-including SHAP values, model comparison metrics, and confusion matrices.
+This module contains a collection of functions for visualizing and analyzing
+machine learning model performance, including SHAP values, model comparison
+metrics, and confusion matrices.
 
-The visualizations are created using Plotly and are designed to be informative, aesthetically pleasing,
-and easily interpretable. The module also supports saving these visualizations as images.
+The visualizations are created using Plotly and are designed to be informative,
+aesthetically pleasing, and easily interpretable. The module also supports
+saving these visualizations as images.
 
-Key functionalities include:
+4Key functionalities include:
 - `shap_summary_plot`: Creates a bar plot to display SHAP feature importance.
-- `shap_force_plot`: Generates a waterfall plot to visualize individual SHAP values and their impact on predictions.
-- `plot_model_performance`: Plots and compares performance metrics across different models using a grouped bar chart.
-- `plot_combined_confusion_matrices`: Creates confusion matrices for multiple models, visualizing their classification performance.
+- `shap_force_plot`: Generates a waterfall plot to visualize individual SHAP
+  values and their impact on predictions.
+- `plot_model_performance`: Plots and compares performance metrics across
+  different models using a grouped bar chart.
+- `plot_combined_confusion_matrices`: Creates confusion matrices for multiple
+  models, visualizing their classification performance.
 
 Constants defined:
 - `BACKGROUND_COLOR`: The background color used for all plots.
-- `PRIMARY_COLORS`: A palette of primary colors used for the main elements of the visualizations.
+- `PRIMARY_COLORS`: A palette of primary colors used for the main elements of
+  the visualizations.
 - `PLOT_COLORS`: A subset of colors used specifically for plotting.
 - `SECONDARY_COLORS`: A palette of secondary colors for additional elements.
-- `ALL_COLORS`: A combination of primary and secondary colors for use across different plots.
+- `ALL_COLORS`: A combination of primary and secondary colors for use across
+  different plots.
 
-This module is intended for use in data analysis workflows where model interpretability and performance
-visualization are essential. The plots generated can be displayed interactively or saved for reporting purposes.
+This module is intended for use in data analysis workflows where model
+interpretability and performance visualization are essential. The plots
+generated can be displayed interactively or saved for reporting purposes.
 """
 
 from typing import List, Optional, Dict, Any
@@ -106,16 +114,20 @@ def shap_force_plot(
     save_path: Optional[str] = None,
 ) -> None:
     """
-    Generates a waterfall plot to visualize individual SHAP values and their impact on predictions.
+    Generates a waterfall plot to visualize individual SHAP values and their
+    impact on predictions.
 
     Args:
-        shap_data (Dict[str, Any]): A dictionary containing 'shap_values', 'x_data', and 'feature_names'.
+        shap_data (Dict[str, Any]): A dictionary containing 'shap_values',
+        'x_data', and 'feature_names'.
         explainer (Any): The SHAP explainer object.
         idx (int, optional): The index of the instance to plot. Defaults to 0.
-        save_path (Optional[str]): The file path to save the plot as an image. Defaults to None.
+        save_path (Optional[str]): The file path to save the plot as an image.
+        Defaults to None.
 
     Returns:
-        None: This function does not return anything. It plots the SHAP values using Plotly.
+        None: This function does not return anything. It plots the SHAP values
+        using Plotly.
     """
     shap_values = shap_data["shap_values"]
     x_data = shap_data["x_data"]
@@ -242,24 +254,30 @@ def plot_combined_confusion_matrices(
     labels: Optional[List[str]] = None,
     save_path: Optional[str] = None,
 ) -> None:
-    """Plots combined confusion matrices for multiple models.
+    """
+    Plots combined confusion matrices for multiple models.
 
     Args:
-        results (Dict[str, Dict[str, float]]): A dictionary containing the results of each model.
-            The keys are the model names, and the values are dictionaries containing the model's performance metrics.
+        results (Dict[str, Dict[str, float]]): A dictionary containing the results
+        of each model. The keys are the model names, and the values are
+        dictionaries containing the model's performance metrics.
         y_test (np.ndarray): The true labels of the test data.
-        y_pred_dict (Dict[str, np.ndarray]): A dictionary containing the predicted labels for each model.
-            The keys are the model names, and the values are the predicted labels.
-        labels (Optional[List[str]], optional): A list of labels for the classes. Defaults to None.
-        save_path (Optional[str], optional): The file path to save the plot as an image. Defaults to None.
+        y_pred_dict (Dict[str, np.ndarray]): A dictionary containing the predicted
+        labels for each model. The keys are the model names, and the values are
+        the predicted labels.
+        labels (Optional[List[str]], optional): A list of labels for the classes.
+        Defaults to None.
+        save_path (Optional[str], optional): The file path to save the plot as an
+        image. Defaults to None.
 
     Returns:
-        None: This function does not return anything. It plots the confusion matrices using Plotly.
+        None: This function does not return anything. It plots the confusion
+        matrices using Plotly.
 
     Raises:
         None: This function does not raise any exceptions.
-
     """
+
     n_models = len(results)
 
     if n_models <= 2:
@@ -449,20 +467,25 @@ def plot_confusion_matrix(
     labels: Optional[List[str]] = None,
     save_path: Optional[str] = None,
 ) -> None:
-    """Plots and optionally saves the confusion matrix.
+    """
+    Plots and optionally saves the confusion matrix.
 
     Args:
         y_true (np.ndarray): Array of true labels.
         y_pred (np.ndarray): Array of predicted labels.
-        labels (Optional[List[str]], optional): A list of labels for the classes. Defaults to None.
-        save_path (Optional[str], optional): The file path to save the plot as an image. Defaults to None.
+        labels (Optional[List[str]], optional): A list of labels for the classes.
+        Defaults to None.
+        save_path (Optional[str], optional): The file path to save the plot as an
+        image. Defaults to None.
 
     Returns:
-        None: This function does not return anything. It plots the confusion matrix using Plotly.
+        None: This function does not return anything. It plots the confusion
+        matrix using Plotly.
 
     Raises:
         None: This function does not raise any exceptions.
     """
+
     cm = confusion_matrix(y_true, y_pred)
     cm_percent = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis] * 100
 

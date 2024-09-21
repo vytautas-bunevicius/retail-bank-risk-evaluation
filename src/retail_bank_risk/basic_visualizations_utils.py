@@ -1,6 +1,7 @@
 """
-This module provides a set of functions for creating and displaying various types of plots
-to visualize data distributions, feature importances, and correlations using Plotly.
+This module provides a set of functions for creating and displaying various types
+of plots to visualize data distributions, feature importances, and correlations
+using Plotly.
 
 Key functionalities include:
 - Plotting histograms, bar charts, and boxplots for specified features.
@@ -11,24 +12,34 @@ Key functionalities include:
 
 Constants:
 - `BACKGROUND_COLOR`: The background color used in all plots.
-- `PRIMARY_COLORS`: A list of primary colors used for the main elements of the plots.
+- `PRIMARY_COLORS`: A list of primary colors used for the main elements of
+  the plots.
 - `PLOT_COLORS`: A subset of colors used for histogram and bar plot elements.
-- `SECONDARY_COLORS`: A set of secondary colors used for additional elements in the plots.
-- `ALL_COLORS`: A combination of primary and secondary colors for use across different plots.
+- `SECONDARY_COLORS`: A set of secondary colors used for additional elements
+  in the plots.
+- `ALL_COLORS`: A combination of primary and secondary colors for use across
+  different plots.
 
 Functions:
-- `plot_combined_histograms`: Plots histograms for multiple features in a single figure.
+- `plot_combined_histograms`: Plots histograms for multiple features in a
+  single figure.
 - `plot_combined_bar_charts`: Plots bar charts for multiple categorical features.
 - `plot_combined_boxplots`: Plots boxplots for multiple numerical features.
-- `plot_correlation_matrix`: Plots a correlation matrix for the specified numerical features.
+- `plot_correlation_matrix`: Plots a correlation matrix for the specified
+  numerical features.
 - `plot_feature_importances`: Plots feature importances across different models.
-- `plot_distribution_comparison`: Compares feature distributions before and after handling missing values.
-- `plot_categorical_features_by_target`: Plots the distribution of categorical features grouped by a target variable.
-- `plot_numeric_distributions`: Plots numeric distributions of features grouped by a binary target variable.
-- `plot_single_bar_chart`: Plots a percentage bar chart for a single categorical feature.
+- `plot_distribution_comparison`: Compares feature distributions before and
+  after handling missing values.
+- `plot_categorical_features_by_target`: Plots the distribution of categorical
+  features grouped by a target variable.
+- `plot_numeric_distributions`: Plots numeric distributions of features grouped
+  by a binary target variable.
+- `plot_single_bar_chart`: Plots a percentage bar chart for a single categorical
+  feature.
 
-This module is intended for use in data exploration and analysis workflows, helping to
-gain insights into data structure, feature importance, and potential relationships between features.
+This module is intended for use in data exploration and analysis workflows,
+helping to gain insights into data structure, feature importance, and potential
+relationships between features.
 """
 
 from typing import List, Optional, Dict
@@ -279,11 +290,14 @@ def plot_combined_boxplots(
 def plot_correlation_matrix(
     df: pd.DataFrame, numerical_features: List[str], save_path: str = None
 ) -> None:
-    """Plots the correlation matrix of the specified numerical features in the DataFrame.
+    """
+    Plots the correlation matrix of the specified numerical features in the
+    DataFrame.
 
     Args:
         df (pd.DataFrame): DataFrame containing the data.
-        numerical_features (List[str]): List of numerical features to include in the correlation matrix.
+        numerical_features (List[str]): List of numerical features to include in
+        the correlation matrix.
         save_path (str): Path to save the image file (optional).
     """
     numerical_df = df[numerical_features]
@@ -321,10 +335,13 @@ def plot_feature_importances(
     feature_importances: Dict[str, Dict[str, float]],
     save_path: Optional[str] = None,
 ) -> None:
-    """Plots and optionally saves a bar chart of feature importances across different models.
+    """
+    Plots and optionally saves a bar chart of feature importances across
+    different models.
 
     Args:
-        feature_importances: A dictionary with model names as keys and dicts of feature importances as values.
+        feature_importances: A dictionary with model names as keys and dicts of
+        feature importances as values.
         save_path: Optional path to save the plot image.
 
     Returns:
@@ -459,16 +476,19 @@ def plot_categorical_features_by_target(
     save_path: Optional[str] = None,
 ) -> None:
     """
-    Plot the distribution of specified categorical features grouped by a target variable.
-    This function creates a grid of bar plots, where each plot represents the distribution
-    of a categorical feature, grouped by the target variable. It shows percentages and
-    uses a consistent y-axis scale across all subplots.
+    Plot the distribution of specified categorical features grouped by a target
+    variable. This function creates a grid of bar plots, where each plot
+    represents the distribution of a categorical feature, grouped by the target
+    variable. It shows percentages and uses a consistent y-axis scale across all
+    subplots.
 
     Args:
         df (pd.DataFrame): The input DataFrame containing the data to be plotted.
-        features (List[str]): A list of column names representing the categorical features to be plotted.
+        features (List[str]): A list of column names representing the categorical
+        features to be plotted.
         target (str): The name of the target variable column used for grouping.
-        save_path (Optional[str]): The file path to save the plot image. If None, the plot is not saved.
+        save_path (Optional[str]): The file path to save the plot image. If None,
+        the plot is not saved.
 
     Returns:
         None. The function displays the plot and optionally saves it to a file.
