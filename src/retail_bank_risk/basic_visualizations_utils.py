@@ -85,7 +85,7 @@ def plot_combined_histograms(
     title = f"Distribution of {', '.join(features)}"
     rows, cols = 1, len(features)
 
-    fig = make_subplots(rows=rows, cols=cols, horizontal_spacing=0.1)
+    fig = make_subplots(rows=rows, cols=cols, horizontal_spacing=0.1, shared_yaxes=True)
 
     axis_font = {"family": "Styrene A", "color": "#191919"}
 
@@ -99,6 +99,7 @@ def plot_combined_histograms(
                     "color": PRIMARY_COLORS[i % len(PRIMARY_COLORS)],
                     "line": {"color": "#000000", "width": 1},
                 },
+                histnorm='percent',
             ),
             row=1,
             col=i + 1,
@@ -112,13 +113,23 @@ def plot_combined_histograms(
             title_font={**axis_font, "size": 14},
             tickfont={**axis_font, "size": 12},
         )
-        fig.update_yaxes(
-            title_text="Count",
-            row=1,
-            col=i + 1,
-            title_font={**axis_font, "size": 14},
-            tickfont={**axis_font, "size": 12},
-        )
+
+        # Remove y-axis title for all but the first subplot
+        if i == 0:
+            fig.update_yaxes(
+                title_text="Percentage",
+                row=1,
+                col=1,
+                title_font={**axis_font, "size": 14},
+                tickfont={**axis_font, "size": 12},
+            )
+        else:
+            fig.update_yaxes(
+                title_text=None,
+                row=1,
+                col=i + 1,
+                tickfont={**axis_font, "size": 12},
+            )
 
     fig.update_layout(
         title_text=title,
@@ -318,15 +329,17 @@ def plot_correlation_matrix(
             "xanchor": "center",
             "yanchor": "top",
         },
-        title_font=dict(size=24),
+        title_font={"size": 24},
         template="plotly_white",
         height=800,
         width=800,
-        margin=dict(l=100, r=100, t=100, b=100),
-        xaxis=dict(
-            tickangle=-45, title_font=dict(size=18), tickfont=dict(size=14)
-        ),
-        yaxis=dict(title_font=dict(size=18), tickfont=dict(size=14)),
+        margin={"l": 100, "r": 100, "t": 100, "b": 100},
+        xaxis={
+            "tickangle": -45,
+            "title_font": {"size": 18},
+            "tickfont": {"size": 14},
+        },
+        yaxis={"title_font": {"size": 18}, "tickfont": {"size": 14}},
     )
 
     if save_path:
@@ -571,17 +584,17 @@ def plot_categorical_features_by_target(
         width=600 * cols,
         margin={"l": 50, "r": 150, "t": 100, "b": 50},
         font={**axis_font, "size": 12},
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="left",
-            x=1.02,
-            bgcolor="rgba(255,255,255,0.6)",
-            bordercolor="Black",
-            borderwidth=1,
-            font={**axis_font, "size": 12},
-        ),
+        legend={
+            "orientation": "v",
+            "yanchor": "middle",
+            "y": 0.5,
+            "xanchor": "left",
+            "x": 1.02,
+            "bgcolor": "rgba(255,255,255,0.6)",
+            "bordercolor": "Black",
+            "borderwidth": 1,
+            "font": {**axis_font, "size": 12},
+        },
     )
 
     if save_path:
@@ -654,7 +667,7 @@ def plot_numeric_distributions(
                     x=bin_edges[:-1],
                     y=data,
                     mode="lines",
-                    line=dict(color=color, width=2),
+                    line={"color": color, "width": 2},
                     showlegend=(i == 0),
                     name=name,
                     hoverinfo="skip",
@@ -685,14 +698,14 @@ def plot_numeric_distributions(
         title_x=0.5,
         title_font={"family": "Styrene B", "size": 20, "color": "#191919"},
         showlegend=True,
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="left",
-            x=1.02,
-            bgcolor="rgba(255,255,255,0.8)",
-        ),
+        legend={
+            "orientation": "v",
+            "yanchor": "middle",
+            "y": 0.5,
+            "xanchor": "left",
+            "x": 1.02,
+            "bgcolor": "rgba(255,255,255,0.8)",
+        },
         template="plotly_white",
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
@@ -782,17 +795,17 @@ def plot_single_bar_chart(
         margin={"l": 50, "r": 150, "t": 80, "b": 50},
         font={**axis_font, "size": 12},
         barmode="group",
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="left",
-            x=1.02,
-            bgcolor="rgba(255,255,255,0.6)",
-            bordercolor="Black",
-            borderwidth=1,
-            font={**axis_font, "size": 12},
-        ),
+        legend={
+            "orientation": "v",
+            "yanchor": "middle",
+            "y": 0.5,
+            "xanchor": "left",
+            "x": 1.02,
+            "bgcolor": "rgba(255,255,255,0.6)",
+            "bordercolor": "Black",
+            "borderwidth": 1,
+            "font": {**axis_font, "size": 12},
+        },
     )
     if save_path:
         fig.write_image(save_path)

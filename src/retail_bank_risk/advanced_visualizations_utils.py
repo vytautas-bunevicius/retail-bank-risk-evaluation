@@ -7,7 +7,7 @@ The visualizations are created using Plotly and are designed to be informative,
 aesthetically pleasing, and easily interpretable. The module also supports
 saving these visualizations as images.
 
-4Key functionalities include:
+Key functionalities include:
 - `shap_summary_plot`: Creates a bar plot to display SHAP feature importance.
 - `shap_force_plot`: Generates a waterfall plot to visualize individual SHAP
   values and their impact on predictions.
@@ -94,13 +94,13 @@ def shap_summary_plot(
         width=1200,
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
-        font=dict(family="Styrene A", size=12, color="#191919"),
-        title=dict(
-            text="SHAP Feature Importance",
-            x=0.5,
-            xanchor="center",
-            font=dict(family="Styrene B", size=20, color="#191919"),
-        ),
+        font={"family": "Styrene A", "size": 12, "color": "#191919"},
+        title={
+            "text": "SHAP Feature Importance",
+            "x": 0.5,
+            "xanchor": "center",
+            "font": {"family": "Styrene B", "size": 20, "color": "#191919"},
+        },
     )
 
     if save_path:
@@ -173,8 +173,8 @@ def shap_force_plot(
         width=800,
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
-        font=dict(family="Styrene A", size=12, color="#191919"),
-        title=dict(font=dict(family="Styrene B", size=20, color="#191919")),
+        font={"family": "Styrene A", "size": 12, "color": "#191919"},
+        title={"font": {"family": "Styrene B", "size": 20, "color": "#191919"}},
     )
     if save_path:
         fig.write_image(save_path)
@@ -288,18 +288,18 @@ def plot_combined_confusion_matrices(
     fig = make_subplots(
         rows=rows,
         cols=cols,
-        subplot_titles=list(results.keys()) + [""] * (rows * cols - n_models),  # type: ignore
+        subplot_titles=list(results.keys()) + [""] * (rows * cols - n_models),
         vertical_spacing=0.2,
         horizontal_spacing=0.1,
     )
 
     axis_font = {"family": "Styrene A", "color": "#191919"}
 
-    for i, name in enumerate(results.keys()):  # type: ignore
+    for i, name in enumerate(results.keys()):
         row = i // cols + 1
         col = i % cols + 1
 
-        cm = confusion_matrix(y_test, y_pred_dict[name])  # type: ignore
+        cm = confusion_matrix(y_test, y_pred_dict[name])
         cm_percent = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis] * 100
 
         text = [
@@ -348,7 +348,6 @@ def plot_combined_confusion_matrices(
             title_standoff=25,
         )
 
-    # Adjust layout based on number of models
     height = 600 if n_models <= 2 else 1000
     width = 1200
 
@@ -362,18 +361,17 @@ def plot_combined_confusion_matrices(
         font={**axis_font, "size": 12},
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
-        margin=dict(t=100, b=50, l=50, r=50),
+        margin={"t": 100, "b": 50, "l": 50, "r": 50},
     )
 
-    # Adjust subplot titles
     for i in fig["layout"]["annotations"]:
-        i["font"] = dict(size=16, family="Styrene B", color="#191919")
+        i["font"] = {"size": 16, "family": "Styrene B", "color": "#191919"}
         i["y"] = i["y"] + 0.03
 
     fig.show()
 
-    if save_path:  # type: ignore
-        fig.write_image(save_path)  # type: ignore
+    if save_path:
+        fig.write_image(save_path)
 
 
 def plot_roc_curve(
@@ -397,7 +395,7 @@ def plot_roc_curve(
             y=tpr,
             mode="lines",
             name="ROC curve",
-            line=dict(color=PRIMARY_COLORS[0]),
+            line={"color": PRIMARY_COLORS[0]},
         )
     )
     fig.add_trace(
@@ -406,7 +404,7 @@ def plot_roc_curve(
             y=[0, 1],
             mode="lines",
             name="Random",
-            line=dict(dash="dash", color=PRIMARY_COLORS[1]),
+            line={"dash": "dash", "color": PRIMARY_COLORS[1]},
         )
     )
     fig.update_layout(
@@ -444,7 +442,7 @@ def plot_precision_recall_curve(
             y=precision,
             mode="lines",
             name="PR curve",
-            line=dict(color=PRIMARY_COLORS[0]),
+            line={"color": PRIMARY_COLORS[0]},
         )
     )
     fig.update_layout(
@@ -528,15 +526,15 @@ def plot_confusion_matrix(
         title_font={"family": "Styrene B", "size": 24, "color": "#191919"},
         xaxis_title="Predicted",
         yaxis_title="Actual",
-        xaxis=dict(tickfont={**axis_font, "size": 12}),
-        yaxis=dict(tickfont={**axis_font, "size": 12}),
+        xaxis={"tickfont": {**axis_font, "size": 12}},
+        yaxis={"tickfont": {**axis_font, "size": 12}},
         height=500,
         width=1200,
         showlegend=False,
         font={**axis_font, "size": 12},
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
-        margin=dict(t=100, b=50, l=50, r=50),
+        margin={"t": 100, "b": 50, "l": 50, "r": 50},
     )
 
     fig.show()
@@ -587,8 +585,12 @@ def plot_learning_curve(
             y=train_scores_mean,
             mode="lines+markers",
             name="Training score",
-            line=dict(color=PRIMARY_COLORS[0]),
-            error_y=dict(type="data", array=train_scores_std, visible=True),
+            line={"color": PRIMARY_COLORS[0]},
+            error_y={
+                "type": "data",
+                "array": train_scores_std,
+                "visible": True,
+            },
         )
     )
     fig.add_trace(
@@ -597,8 +599,8 @@ def plot_learning_curve(
             y=test_scores_mean,
             mode="lines+markers",
             name="Cross-validation score",
-            line=dict(color=PRIMARY_COLORS[1]),
-            error_y=dict(type="data", array=test_scores_std, visible=True),
+            line={"color": PRIMARY_COLORS[1]},
+            error_y={"type": "data", "array": test_scores_std, "visible": True},
         )
     )
     fig.update_layout(
