@@ -26,7 +26,7 @@ such as anomaly detection, missing data handling, and feature engineering.
 """
 
 from collections import Counter
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import KNNImputer
 
 
-def reduce_memory_usage_pl(df: pl.DataFrame, verbose: bool = True) -> pl.DataFrame:
+def reduce_memory_usage_pl(
+    df: pl.DataFrame, verbose: bool = True
+) -> pl.DataFrame:
     """Reduces memory usage of a Polars DataFrame by optimizing data types.
 
     This function attempts to downcast numeric columns to the smallest possible
@@ -73,9 +75,15 @@ def reduce_memory_usage_pl(df: pl.DataFrame, verbose: bool = True) -> pl.DataFra
 
             if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
                 new_type = pl.Int8
-            elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+            elif (
+                c_min > np.iinfo(np.int16).min
+                and c_max < np.iinfo(np.int16).max
+            ):
                 new_type = pl.Int16
-            elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+            elif (
+                c_min > np.iinfo(np.int32).min
+                and c_max < np.iinfo(np.int32).max
+            ):
                 new_type = pl.Int32
             else:
                 new_type = pl.Int64
@@ -84,7 +92,10 @@ def reduce_memory_usage_pl(df: pl.DataFrame, verbose: bool = True) -> pl.DataFra
 
         elif col_type in numeric_float_types:
             c_min, c_max = df[col].min(), df[col].max()
-            if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+            if (
+                c_min > np.finfo(np.float32).min
+                and c_max < np.finfo(np.float32).max
+            ):
                 df = df.with_columns(df[col].cast(pl.Float32))
 
         elif col_type == pl.String:
@@ -130,7 +141,9 @@ def initial_feature_reduction(
         ValueError: If the target column is not in the training DataFrame.
     """
     if target_col not in train_df.columns:
-        raise ValueError(f"Target column '{target_col}' not found in training data.")
+        raise ValueError(
+            f"Target column '{target_col}' not found in training data."
+        )
 
     essential_features = essential_features or []
 
@@ -143,7 +156,9 @@ def initial_feature_reduction(
     filtered_df = combined_df.select(cols_to_keep_missing + essential_features)
 
     numeric_cols = _get_numeric_columns(filtered_df)
-    numeric_cols = [col for col in numeric_cols if col not in essential_features]
+    numeric_cols = [
+        col for col in numeric_cols if col not in essential_features
+    ]
 
     cols_to_keep_variance = _filter_by_variance(
         filtered_df, numeric_cols, variance_threshold
@@ -158,7 +173,9 @@ def initial_feature_reduction(
         & set(cols_to_keep_variance)
         & set(cols_to_keep_correlation)
     )
-    final_cols.extend([col for col in cols_to_keep_missing if col not in numeric_cols])
+    final_cols.extend(
+        [col for col in cols_to_keep_missing if col not in numeric_cols]
+    )
     final_cols.extend(essential_features)
 
     return (
@@ -179,18 +196,23 @@ def impute_numerical_features(train_df, test_df, target_col):
         Tuple of imputed training and test DataFrames.
     """
     if not train_df.shape[0] or not test_df.shape[0]:
-        print("Warning: One of the DataFrames is empty. Skipping numerical imputation.")
+        print(
+            "Warning: One of the DataFrames is empty. Skipping numerical imputation."
+        )
         return train_df, test_df
 
     numerical_features = [
         col
         for col, dtype in zip(train_df.columns, train_df.dtypes)
-        if dtype in (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.Float32, pl.Float64)
+        if dtype
+        in (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.Float32, pl.Float64)
         and col != target_col
     ]
 
     if not numerical_features:
-        print("Warning: No numerical features found. Skipping numerical imputation.")
+        print(
+            "Warning: No numerical features found. Skipping numerical imputation."
+        )
         return train_df, test_df
 
     imputer = KNNImputer(n_neighbors=5)
@@ -390,7 +412,9 @@ def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
         anomalies_list.append(feature_anomalies)
 
     if anomalies_list:
-        anomalies = pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
+        anomalies = (
+            pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
+        )
         anomalies = anomalies[features]
     else:
         anomalies = pd.DataFrame(columns=features)
@@ -421,7 +445,9 @@ def flag_anomalies(df: pd.DataFrame, features: List[str]) -> pd.Series:
         lower_bound = first_quartile - 1.5 * interquartile_range
         upper_bound = third_quartile + 1.5 * interquartile_range
 
-        feature_anomalies = (df[feature] < lower_bound) | (df[feature] > upper_bound)
+        feature_anomalies = (df[feature] < lower_bound) | (
+            df[feature] > upper_bound
+        )
         anomaly_flags |= feature_anomalies
 
     return anomaly_flags
@@ -445,7 +471,9 @@ def calculate_cramers_v(x, y):
     return np.sqrt(chi2 / (n * min_dim))
 
 
-def get_top_missing_value_percentages(df: pl.DataFrame, top_n: int = 5) -> pl.DataFrame:
+def get_top_missing_value_percentages(
+    df: pl.DataFrame, top_n: int = 5
+) -> pl.DataFrame:
     """Calculates the percentage of missing values for each column in a Polars DataFrame
     and returns the top N columns with the highest percentage of missing values.
 
@@ -580,3 +608,48 @@ def create_stratified_sample(
     )
 
     return pd.concat([sample_features, sample_target], axis=1)
+
+
+def calculate_cliff_delta(
+    df: pd.DataFrame, feature: str, target: str
+) -> Union[float, np.float64]:
+    """Calculates Cliff's delta, a non-parametric effect size measure.
+
+    Cliff's delta quantifies the difference between two groups.  It represents
+    the probability that a randomly selected observation from one group is
+    higher than a randomly selected observation from the other group, minus
+    the reverse probability.
+
+    Args:
+        df: The input DataFrame containing the feature and target columns.
+        feature: The name of the feature column (numerical).
+        target: The name of the target column (binary: 0 or 1).
+
+    Returns:
+        Cliff's delta, a value between -1 and 1.  Returns np.nan if either
+        group is empty.  A positive value indicates that the feature values
+        in the target=1 group tend to be larger.  A negative value indicates
+        the opposite.  A value close to 0 indicates little difference
+        between the groups.
+    """
+    group1 = df[df[target] == 0][feature].dropna()
+    group2 = df[df[target] == 1][feature].dropna()
+
+    n1: int = len(group1)
+    n2: int = len(group2)
+
+    if n1 == 0 or n2 == 0:
+        return np.nan
+
+    diffs: np.ndarray = np.zeros((n1, n2))
+    for i, val1 in enumerate(group1):
+        for j, val2 in enumerate(group2):
+            if val1 > val2:
+                diffs[i, j] = 1
+            elif val1 < val2:
+                diffs[i, j] = -1
+            else:
+                diffs[i, j] = 0
+
+    cliff_d: np.float64 = (2 * np.sum(diffs)) / (n1 * n2) - 1
+    return cliff_d
