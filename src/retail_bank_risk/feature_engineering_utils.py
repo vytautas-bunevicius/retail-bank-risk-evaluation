@@ -13,7 +13,7 @@ Functions:
     engineer_features(df: pd.DataFrame) -> pd.DataFrame
 """
 
-from typing import List
+from typing import List, Tuple
 
 import pandas as pd
 import numpy as np
@@ -126,69 +126,120 @@ def create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     ).astype(int)
     return df
 
+
 def encode_categorical_features(
     df_train: pd.DataFrame,
     df_test: pd.DataFrame,
     ohe_features: List[str],
     target_encoded_features: List[str],
     target_column: str,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Encodes categorical features using One-Hot and LeaveOneOut encoding.
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Encodes categorical features using One-Hot Encoding and Leave-One-Out Encoding.
 
-    This function performs One-Hot encoding for low-cardinality categorical
-    features and LeaveOneOut encoding for high-cardinality categorical features.
-    It handles the target variable correctly by excluding it from encoding and
-    ensures consistent column names between training and testing sets.
+    This function performs One-Hot Encoding for low-cardinality categorical
+    features and Leave-One-Out Encoding for high-cardinality categorical features.
+    It excludes target-encoded features from One-Hot Encoding to prevent redundant processing.
+    The function replaces specific placeholder values like 'xna' with NaN to correctly handle missing values.
+    It ensures consistent column names between training and testing sets by aligning them.
     All generated column names are converted to lowercase for consistency.
+    Unwanted encoded columns containing '_xna' or '-1' are dropped immediately after encoding.
+    Constant columns with only one unique value are also removed.
 
     Args:
-        df_train: The training dataframe.
-        df_test: The testing dataframe.
-        ohe_features: A list of column names to be One-Hot encoded.
-        target_encoded_features: A list of column names to be target encoded.
-        target_column: The name of the target variable column.
+        df_train (pd.DataFrame): The training dataframe.
+        df_test (pd.DataFrame): The testing dataframe.
+        ohe_features (List[str]): List of column names to be One-Hot encoded.
+        target_encoded_features (List[str]): List of column names to be Leave-One-Out encoded.
+        target_column (str): The name of the target variable column.
 
     Returns:
-        A tuple containing the encoded training and testing dataframes.
+        Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing the encoded training and testing dataframes.
     """
 
     df_train_encoded = df_train.copy()
     df_test_encoded = df_test.copy()
 
-    ohe = OneHotEncoder(cols=ohe_features, use_cat_names=True, handle_unknown='indicator')
-    df_train_encoded = ohe.fit_transform(df_train_encoded.drop(columns=[target_column]))
-    df_test_encoded = ohe.transform(df_test_encoded)
+    categorical_features = ohe_features + target_encoded_features
+
+    placeholders = ["xna"]
+
+    for feature in categorical_features:
+        if feature in df_train_encoded.columns:
+            df_train_encoded[feature] = df_train_encoded[feature].replace(
+                placeholders, np.nan
+            )
+        if feature in df_test_encoded.columns:
+            df_test_encoded[feature] = df_test_encoded[feature].replace(
+                placeholders, np.nan
+            )
+
+    ohe_features_exclusive = [
+        feat for feat in ohe_features if feat not in target_encoded_features
+    ]
+
+    ohe = OneHotEncoder(
+        cols=ohe_features_exclusive, use_cat_names=True, handle_unknown="ignore"
+    )
+
+    if target_column in df_train_encoded.columns:
+        df_train_ohe = df_train_encoded.drop(columns=[target_column])
+    else:
+        df_train_ohe = df_train_encoded.copy()
+
+    df_train_encoded = ohe.fit_transform(df_train_ohe)
+
+    if target_column in df_test_encoded.columns:
+        df_test_ohe = df_test_encoded.drop(columns=[target_column])
+    else:
+        df_test_ohe = df_test_encoded.copy()
+
+    df_test_encoded = ohe.transform(df_test_ohe)
 
     df_train_encoded.columns = df_train_encoded.columns.str.lower()
     df_test_encoded.columns = df_test_encoded.columns.str.lower()
 
-    train_cols = set(df_train_encoded.columns)
-    test_cols = set(df_test_encoded.columns)
+    df_test_encoded = df_test_encoded.reindex(
+        columns=df_train_encoded.columns, fill_value=0
+    )
 
-    missing_in_test = list(train_cols - test_cols)
-    for column in missing_in_test:
-        df_test_encoded[column] = 0
+    unwanted_suffixes = ["_xna", "-1"]
+    unwanted_cols = [
+        col
+        for col in df_train_encoded.columns
+        if any(suffix in col for suffix in unwanted_suffixes)
+    ]
+    if unwanted_cols:
+        df_train_encoded = df_train_encoded.drop(columns=unwanted_cols)
+        df_test_encoded = df_test_encoded.drop(
+            columns=unwanted_cols, errors="ignore"
+        )
 
-    extra_in_test = list(test_cols - train_cols)
-    df_test_encoded = df_test_encoded.drop(columns=extra_in_test, errors='ignore')
+    loo = LeaveOneOutEncoder(
+        cols=target_encoded_features, handle_unknown="value", sigma=0.0
+    )
 
-    df_test_encoded = df_test_encoded[df_train_encoded.columns]
+    df_train_encoded[target_encoded_features] = loo.fit_transform(
+        df_train[target_encoded_features], df_train[target_column]
+    )
 
-    for feature in target_encoded_features:
-        encoder = LeaveOneOutEncoder(cols=[feature], handle_unknown='value')
+    df_test_encoded[target_encoded_features] = loo.transform(
+        df_test[target_encoded_features]
+    )
 
-        train_encoded_feature = encoder.fit_transform(df_train[feature], df_train[target_column])
-        train_encoded_feature.columns = train_encoded_feature.columns.str.lower()
-        df_train_encoded[train_encoded_feature.columns] = train_encoded_feature
+    if target_column in df_train.columns:
+        df_train_encoded[target_column] = df_train[target_column].values
 
-        test_encoded_feature = encoder.transform(df_test[feature])
-        test_encoded_feature.columns = test_encoded_feature.columns.str.lower()
-        df_test_encoded[test_encoded_feature.columns] = test_encoded_feature
-
-
-    df_train_encoded = df_train_encoded.drop(columns=target_encoded_features)
-    df_test_encoded = df_test_encoded.drop(columns=target_encoded_features)
-
-    df_train_encoded[target_column] = df_train[target_column]
+    # Remove constant columns
+    constant_cols = [
+        col
+        for col in df_train_encoded.columns
+        if df_train_encoded[col].nunique() == 1
+    ]
+    if constant_cols:
+        df_train_encoded = df_train_encoded.drop(columns=constant_cols)
+        df_test_encoded = df_test_encoded.drop(
+            columns=constant_cols, errors="ignore"
+        )
 
     return df_train_encoded, df_test_encoded
