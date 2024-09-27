@@ -13,8 +13,11 @@ Functions:
     engineer_features(df: pd.DataFrame) -> pd.DataFrame
 """
 
-import numpy as np
+from typing import List
+
 import pandas as pd
+import numpy as np
+from category_encoders import LeaveOneOutEncoder, OneHotEncoder
 
 
 def bin_age_into_groups(df: pd.DataFrame, age_column: str) -> pd.Series:
@@ -116,35 +119,76 @@ def create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     df["annuity_to_income_ratio"] = calculate_ratio(
         df, "amt_annuity", "amt_income_total", "annuity_to_income_ratio"
     )
-    df["employed_to_age_ratio"] = calculate_ratio(
-        df,
-        "days_employed",
-        "days_birth",
-        "employed_to_age_ratio",
-        fill_value=1.0,
-    )
-    df["ext_source_mean"] = df[
-        ["ext_source_1", "ext_source_2", "ext_source_3"]
-    ].mean(axis=1)
+
+    df["ext_source_mean"] = df[["ext_source_2", "ext_source_3"]].mean(axis=1)
     df["credit_exceeds_goods"] = (
         df["amt_credit"] > df["amt_goods_price"]
     ).astype(int)
     return df
 
+def encode_categorical_features(
+    df_train: pd.DataFrame,
+    df_test: pd.DataFrame,
+    ohe_features: List[str],
+    target_encoded_features: List[str],
+    target_column: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Encodes categorical features using One-Hot and LeaveOneOut encoding.
 
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Apply all feature engineering steps to the input DataFrame.
-
-    This function creates both binned versions of continuous variables
-    and new derived features based on domain knowledge.
+    This function performs One-Hot encoding for low-cardinality categorical
+    features and LeaveOneOut encoding for high-cardinality categorical features.
+    It handles the target variable correctly by excluding it from encoding and
+    ensures consistent column names between training and testing sets.
+    All generated column names are converted to lowercase for consistency.
 
     Args:
-        df (pd.DataFrame): The input DataFrame.
+        df_train: The training dataframe.
+        df_test: The testing dataframe.
+        ohe_features: A list of column names to be One-Hot encoded.
+        target_encoded_features: A list of column names to be target encoded.
+        target_column: The name of the target variable column.
 
     Returns:
-        pd.DataFrame: The DataFrame with all engineered features added.
+        A tuple containing the encoded training and testing dataframes.
     """
-    df = create_binned_features(df)
-    df = create_derived_features(df)
-    return df
+
+    df_train_encoded = df_train.copy()
+    df_test_encoded = df_test.copy()
+
+    ohe = OneHotEncoder(cols=ohe_features, use_cat_names=True, handle_unknown='indicator')
+    df_train_encoded = ohe.fit_transform(df_train_encoded.drop(columns=[target_column]))
+    df_test_encoded = ohe.transform(df_test_encoded)
+
+    df_train_encoded.columns = df_train_encoded.columns.str.lower()
+    df_test_encoded.columns = df_test_encoded.columns.str.lower()
+
+    train_cols = set(df_train_encoded.columns)
+    test_cols = set(df_test_encoded.columns)
+
+    missing_in_test = list(train_cols - test_cols)
+    for column in missing_in_test:
+        df_test_encoded[column] = 0
+
+    extra_in_test = list(test_cols - train_cols)
+    df_test_encoded = df_test_encoded.drop(columns=extra_in_test, errors='ignore')
+
+    df_test_encoded = df_test_encoded[df_train_encoded.columns]
+
+    for feature in target_encoded_features:
+        encoder = LeaveOneOutEncoder(cols=[feature], handle_unknown='value')
+
+        train_encoded_feature = encoder.fit_transform(df_train[feature], df_train[target_column])
+        train_encoded_feature.columns = train_encoded_feature.columns.str.lower()
+        df_train_encoded[train_encoded_feature.columns] = train_encoded_feature
+
+        test_encoded_feature = encoder.transform(df_test[feature])
+        test_encoded_feature.columns = test_encoded_feature.columns.str.lower()
+        df_test_encoded[test_encoded_feature.columns] = test_encoded_feature
+
+
+    df_train_encoded = df_train_encoded.drop(columns=target_encoded_features)
+    df_test_encoded = df_test_encoded.drop(columns=target_encoded_features)
+
+    df_train_encoded[target_column] = df_train[target_column]
+
+    return df_train_encoded, df_test_encoded

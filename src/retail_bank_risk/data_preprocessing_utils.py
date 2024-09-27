@@ -13,8 +13,6 @@ Functions included:
   based on a threshold.
 - `simple_imputation`: Performs simple imputation on missing values in
   training and testing datasets.
-- `engineer_spaceship_features`: Performs feature engineering, particularly
-  for a spaceship passenger dataset.
 - `confidence_interval`: Calculates the confidence interval for a given
   dataset.
 - `create_pipeline`: Creates a scikit-learn pipeline for preprocessing and
