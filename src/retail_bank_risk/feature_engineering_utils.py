@@ -140,7 +140,8 @@ def encode_categorical_features(
     This function performs One-Hot Encoding for low-cardinality categorical
     features and Leave-One-Out Encoding for high-cardinality categorical features.
     It excludes target-encoded features from One-Hot Encoding to prevent redundant processing.
-    The function replaces specific placeholder values like 'xna' with NaN to correctly handle missing values.
+    The function replaces specific placeholder values like 'xna' with NaN
+            to correctly handle missing values.
     It ensures consistent column names between training and testing sets by aligning them.
     All generated column names are converted to lowercase for consistency.
     Unwanted encoded columns containing '_xna' or '-1' are dropped immediately after encoding.
@@ -154,7 +155,8 @@ def encode_categorical_features(
         target_column (str): The name of the target variable column.
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing the encoded training and testing dataframes.
+        Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing the encoded
+                training and testing dataframes.
     """
 
     df_train_encoded = df_train.copy()
