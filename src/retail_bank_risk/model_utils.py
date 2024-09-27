@@ -63,7 +63,9 @@ def evaluate_model(
     y_pred_proba = model.predict_proba(features)[:, 1]
 
     if target_recall is not None:
-        _, recalls, thresholds = precision_recall_curve(true_labels, y_pred_proba)
+        _, recalls, thresholds = precision_recall_curve(
+            true_labels, y_pred_proba
+        )
         idx = np.argmin(np.abs(recalls - target_recall))
         threshold = thresholds[idx]
         print(f"Adjusted threshold: {threshold:.4f}")
@@ -82,9 +84,13 @@ def evaluate_model(
     print(f"ROC AUC: {roc_auc_score(true_labels, y_pred_proba):.4f}")
     print(f"PR AUC: {average_precision_score(true_labels, y_pred_proba):.4f}")
     print(f"F1 Score: {f1_score(true_labels, y_pred, zero_division=1):.4f}")
-    print(f"Precision: {precision_score(true_labels, y_pred, zero_division=1):.4f}")
+    print(
+        f"Precision: {precision_score(true_labels, y_pred, zero_division=1):.4f}"
+    )
     print(f"Recall: {recall_score(true_labels, y_pred):.4f}")
-    print(f"Balanced Accuracy: {balanced_accuracy_score(true_labels, y_pred):.4f}")
+    print(
+        f"Balanced Accuracy: {balanced_accuracy_score(true_labels, y_pred):.4f}"
+    )
 
     return {
         "roc_auc": roc_auc_score(true_labels, y_pred_proba),
