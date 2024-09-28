@@ -20,7 +20,7 @@ This module is intended for use in machine learning workflows to assess model
 performance and interpret feature importance.
 """
 
-from typing import Dict, Union, Tuple
+from typing import Dict, Union, Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -130,7 +130,9 @@ def extract_feature_importances(
 
 
 def downscale_dtypes(
-    df_train: pd.DataFrame, df_test: pd.DataFrame = None
+    df_train: pd.DataFrame,
+    df_test: Optional[pd.DataFrame] = None,
+    target_column: Optional[str] = None,
 ) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame]]:
     """
     Downscale numeric columns and encode categoricals based on df_train.
@@ -138,12 +140,15 @@ def downscale_dtypes(
     This function optimizes memory usage by downcasting numeric columns to
     the smallest possible data type that can represent all values without
     loss of information. It also ensures consistent categorical encoding
-    between train and test datasets.
+    between train and test datasets. The target column, if specified and
+    present, is ensured to be numeric.
 
     Args:
         df_train: Training DataFrame to be downscaled.
         df_test: Optional test DataFrame to be downscaled using the same
             rules as df_train.
+        target_column: Optional name of the target column to ensure it's
+            numeric.
 
     Returns:
         If df_test is None:
@@ -161,7 +166,9 @@ def downscale_dtypes(
     categorical_actions = {}
 
     for col in df_train.columns:
-        if pd.api.types.is_numeric_dtype(df_train[col]):
+        if col == target_column and col in df_train.columns:
+            downscale_actions[col] = _ensure_numeric_target(df_train[col])
+        elif pd.api.types.is_numeric_dtype(df_train[col]):
             downscale_actions[col] = _get_optimal_numeric_type(df_train[col])
         elif hasattr(df_train[col].dtype, "categories"):
             categorical_actions[col] = df_train[col].cat.categories
@@ -169,7 +176,14 @@ def downscale_dtypes(
     df_train = df_train.astype(downscale_actions)
 
     if df_test is not None:
-        df_test = df_test.astype(downscale_actions)
+        # Only apply downscaling to columns that exist in df_test
+        test_downscale_actions = {
+            col: dtype
+            for col, dtype in downscale_actions.items()
+            if col in df_test.columns
+        }
+        df_test = df_test.astype(test_downscale_actions)
+
         for col, categories in categorical_actions.items():
             if col in df_test.columns:
                 df_test[col] = pd.Categorical(
@@ -178,6 +192,24 @@ def downscale_dtypes(
         return df_train, df_test
 
     return df_train
+
+
+def _ensure_numeric_target(series: pd.Series) -> np.dtype:
+    """
+    Ensure the target column is numeric and determine its optimal dtype.
+
+    Args:
+        series: The pandas Series representing the target column.
+
+    Returns:
+        The optimal numpy dtype for the target series.
+    """
+    if pd.api.types.is_categorical_dtype(series):
+        series = series.cat.codes
+    elif not pd.api.types.is_numeric_dtype(series):
+        series = pd.factorize(series)[0]
+
+    return _get_optimal_numeric_type(series)
 
 
 def _get_optimal_numeric_type(series: pd.Series) -> np.dtype:
