@@ -31,6 +31,7 @@ generated can be displayed interactively or saved for reporting purposes.
 """
 
 from typing import List, Optional, Dict, Any
+import math
 
 import numpy as np
 import pandas as pd
@@ -76,7 +77,9 @@ def shap_summary_plot(
     feature_importance = pd.DataFrame(
         {"feature": feature_names, "importance": shap_mean}
     )
-    feature_importance = feature_importance.sort_values("importance", ascending=True)
+    feature_importance = feature_importance.sort_values(
+        "importance", ascending=True
+    )
 
     fig = px.bar(
         feature_importance,
@@ -197,7 +200,8 @@ def plot_model_performance(
     """
     model_names = list(results.keys())
     data = {
-        metric: [results[name][metric] for name in model_names] for metric in metrics
+        metric: [results[name][metric] for name in model_names]
+        for metric in metrics
     }
 
     fig = go.Figure()
@@ -238,7 +242,9 @@ def plot_model_performance(
         paper_bgcolor=BACKGROUND_COLOR,
     )
 
-    fig.update_yaxes(range=[0, 1], showgrid=True, gridwidth=1, gridcolor="LightGrey")
+    fig.update_yaxes(
+        range=[0, 1], showgrid=True, gridwidth=1, gridcolor="LightGrey"
+    )
     fig.update_xaxes(tickangle=-45, tickfont={**axis_font, "size": 12})
 
     fig.show()
@@ -273,29 +279,30 @@ def plot_combined_confusion_matrices(
     Returns:
         None: This function does not return anything. It plots the confusion
         matrices using Plotly.
-
-    Raises:
-        None: This function does not raise any exceptions.
     """
 
     n_models = len(results)
 
+    # Determine the grid layout
     if n_models <= 2:
         rows, cols = 1, 2
-    else:
+    elif n_models <= 4:
         rows, cols = 2, 2
+    else:
+        rows = math.ceil(n_models / 2)
+        cols = 2
 
     fig = make_subplots(
         rows=rows,
         cols=cols,
-        subplot_titles=list(results.keys()) + [""] * (rows * cols - n_models),
-        vertical_spacing=0.2,
+        subplot_titles=list(results.keys()),
+        vertical_spacing=0.1,
         horizontal_spacing=0.1,
     )
 
     axis_font = {"family": "Styrene A", "color": "#191919"}
 
-    for i, name in enumerate(results.keys()):
+    for i, (name, _) in enumerate(results.items()):
         row = i // cols + 1
         col = i % cols + 1
 
@@ -322,8 +329,8 @@ def plot_combined_confusion_matrices(
 
         heatmap = go.Heatmap(
             z=cm,
-            x=labels or ["No Stroke", "Stroke"],
-            y=labels or ["No Stroke", "Stroke"],
+            x=labels or ["Non-Defaulter", "Defaulter"],
+            y=labels or ["Non-Defaulter", "Defaulter"],
             hoverongaps=False,
             text=text,
             texttemplate="%{text}",
@@ -348,7 +355,7 @@ def plot_combined_confusion_matrices(
             title_standoff=25,
         )
 
-    height = 600 if n_models <= 2 else 1000
+    height = max(400 * rows, 800)  # Ensure minimum height of 800
     width = 1200
 
     fig.update_layout(
@@ -364,19 +371,17 @@ def plot_combined_confusion_matrices(
         margin={"t": 100, "b": 50, "l": 50, "r": 50},
     )
 
-    for i in fig["layout"]["annotations"]:
-        i["font"] = {"size": 16, "family": "Styrene B", "color": "#191919"}
-        i["y"] = i["y"] + 0.03
-
     if save_path:
         fig.write_image(save_path)
+
+    return fig
 
 
 def plot_roc_curve(
     y_true: np.ndarray,
     y_pred_proba: np.ndarray,
     save_path: Optional[str] = None,
-) -> None:
+) -> go.Figure:
     """
     Plot and optionally save the Receiver Operating Characteristic (ROC) curve.
 
@@ -384,6 +389,9 @@ def plot_roc_curve(
         y_true: Array of true labels.
         y_pred_proba: Array of predicted probabilities.
         save_path: Optional path to save the plot image.
+
+    Returns:
+        go.Figure: The plotly Figure object containing the ROC curve.
     """
     fpr, tpr, _ = roc_curve(y_true, y_pred_proba)
     fig = go.Figure()
@@ -406,7 +414,11 @@ def plot_roc_curve(
         )
     )
     fig.update_layout(
-        title="Receiver Operating Characteristic (ROC) Curve",
+        title={
+            "text": "Receiver Operating Characteristic (ROC) Curve",
+            "x": 0.5,
+            "xanchor": "center",
+        },
         xaxis_title="False Positive Rate",
         yaxis_title="True Positive Rate",
         plot_bgcolor=BACKGROUND_COLOR,
@@ -414,9 +426,11 @@ def plot_roc_curve(
         width=1200,
         height=500,
     )
-    fig.show()
+
     if save_path:
         fig.write_image(save_path)
+
+    return fig
 
 
 def plot_precision_recall_curve(
@@ -444,7 +458,11 @@ def plot_precision_recall_curve(
         )
     )
     fig.update_layout(
-        title="Precision-Recall Curve",
+        title={
+            "text": "Precision-Recall Curve",
+            "x": 0.5,
+            "xanchor": "center",
+        },
         xaxis_title="Recall",
         yaxis_title="Precision",
         plot_bgcolor=BACKGROUND_COLOR,
@@ -452,9 +470,11 @@ def plot_precision_recall_curve(
         width=1200,
         height=500,
     )
-    fig.show()
+
     if save_path:
         fig.write_image(save_path)
+
+    return fig
 
 
 def plot_confusion_matrix(
@@ -602,7 +622,13 @@ def plot_learning_curve(
         )
     )
     fig.update_layout(
-        title="Learning Curve",
+        title={
+            "text": "Learning Curve",
+            "y": 0.95,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+        },
         xaxis_title="Training examples",
         yaxis_title="Score",
         plot_bgcolor=BACKGROUND_COLOR,
@@ -610,6 +636,8 @@ def plot_learning_curve(
         width=1200,
         height=500,
     )
-    fig.show()
+
     if save_path:
         fig.write_image(save_path)
+
+    return fig
