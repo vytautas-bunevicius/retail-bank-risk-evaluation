@@ -247,10 +247,10 @@ def plot_model_performance(
     )
     fig.update_xaxes(tickangle=-45, tickfont={**axis_font, "size": 12})
 
-    fig.show()
-
     if save_path:
         fig.write_image(save_path)
+
+    return fig
 
 
 def plot_combined_confusion_matrices(
