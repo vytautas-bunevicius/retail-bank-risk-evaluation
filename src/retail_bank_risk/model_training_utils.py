@@ -267,7 +267,7 @@ def _get_optimal_float_type(series: pd.Series) -> np.dtype:
     """
     Determine the optimal float dtype for a given series.
 
-    Args:
+    Args:   
         series: The pandas Series to analyze.
 
     Returns:
