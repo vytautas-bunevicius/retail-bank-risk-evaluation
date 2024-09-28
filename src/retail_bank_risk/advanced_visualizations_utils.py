@@ -368,8 +368,6 @@ def plot_combined_confusion_matrices(
         i["font"] = {"size": 16, "family": "Styrene B", "color": "#191919"}
         i["y"] = i["y"] + 0.03
 
-    fig.show()
-
     if save_path:
         fig.write_image(save_path)
 
@@ -537,10 +535,10 @@ def plot_confusion_matrix(
         margin={"t": 100, "b": 50, "l": 50, "r": 50},
     )
 
-    fig.show()
-
     if save_path:
         fig.write_image(save_path)
+
+    return fig
 
 
 def plot_learning_curve(
