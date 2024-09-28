@@ -13,11 +13,12 @@ Functions:
     engineer_features(df: pd.DataFrame) -> pd.DataFrame
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import pandas as pd
 import numpy as np
 from category_encoders import LeaveOneOutEncoder, OneHotEncoder
+from sklearn.preprocessing import OrdinalEncoder
 
 
 def bin_age_into_groups(df: pd.DataFrame, age_column: str) -> pd.Series:
@@ -132,37 +133,34 @@ def encode_categorical_features(
     df_test: pd.DataFrame,
     ohe_features: List[str],
     target_encoded_features: List[str],
+    ordinal_features: List[str],
+    ordinal_orders: Dict[str, List],
     target_column: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Encodes categorical features using One-Hot Encoding and Leave-One-Out Encoding.
+    """Encodes categorical features using various encoding methods.
 
-    This function performs One-Hot Encoding for low-cardinality categorical
-    features and Leave-One-Out Encoding for high-cardinality categorical features.
-    It excludes target-encoded features from One-Hot Encoding to prevent redundant processing.
-    The function replaces specific placeholder values like 'xna' with NaN
-            to correctly handle missing values.
-    It ensures consistent column names between training and testing sets by aligning them.
-    All generated column names are converted to lowercase for consistency.
-    Unwanted encoded columns containing '_xna' or '-1' are dropped immediately after encoding.
-    Constant columns with only one unique value are also removed.
+    This function performs One-Hot Encoding for low-cardinality features,
+    Leave-One-Out Encoding for high-cardinality features, and Ordinal Encoding
+    for features with a natural order.
 
     Args:
-        df_train (pd.DataFrame): The training dataframe.
-        df_test (pd.DataFrame): The testing dataframe.
-        ohe_features (List[str]): List of column names to be One-Hot encoded.
-        target_encoded_features (List[str]): List of column names to be Leave-One-Out encoded.
-        target_column (str): The name of the target variable column.
+        df_train: The training dataframe.
+        df_test: The testing dataframe.
+        ohe_features: List of column names to be One-Hot encoded.
+        target_encoded_features: List of columns to be Leave-One-Out encoded.
+        ordinal_features: List of ordinal features to encode.
+        ordinal_orders: Dict mapping ordinal features to category orders.
+        target_column: The name of the target variable column.
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing the encoded
-                training and testing dataframes.
+        A tuple containing the encoded training and testing dataframes.
     """
-
     df_train_encoded = df_train.copy()
     df_test_encoded = df_test.copy()
 
-    categorical_features = ohe_features + target_encoded_features
+    categorical_features = (
+        ohe_features + target_encoded_features + ordinal_features
+    )
 
     placeholders = ["xna"]
 
@@ -177,7 +175,9 @@ def encode_categorical_features(
             )
 
     ohe_features_exclusive = [
-        feat for feat in ohe_features if feat not in target_encoded_features
+        feat
+        for feat in ohe_features
+        if feat not in target_encoded_features and feat not in ordinal_features
     ]
 
     ohe = OneHotEncoder(
@@ -229,10 +229,22 @@ def encode_categorical_features(
         df_test[target_encoded_features]
     )
 
+    ordinal_encoder = OrdinalEncoder(
+        categories=[ordinal_orders[feat] for feat in ordinal_features],
+        handle_unknown="use_encoded_value",
+        unknown_value=-1,
+    )
+
+    df_train_encoded[ordinal_features] = ordinal_encoder.fit_transform(
+        df_train[ordinal_features]
+    )
+    df_test_encoded[ordinal_features] = ordinal_encoder.transform(
+        df_test[ordinal_features]
+    )
+
     if target_column in df_train.columns:
         df_train_encoded[target_column] = df_train[target_column].values
 
-    # Remove constant columns
     constant_cols = [
         col
         for col in df_train_encoded.columns
