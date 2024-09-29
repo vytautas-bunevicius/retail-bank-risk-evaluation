@@ -299,7 +299,7 @@ def downscale_dtypes(
     df_train = df_train.astype(downscale_actions)
 
     if df_test is not None:
-        # Only apply downscaling to columns that exist in df_test
+        
         test_downscale_actions = {
             col: dtype
             for col, dtype in downscale_actions.items()
