@@ -4,19 +4,23 @@ detection, feature engineering, and statistical analysis, specifically
 tailored for machine learning workflows.
 
 Functions included:
-- `detect_anomalies_iqr`: Detects anomalies in multiple features using the
-  Interquartile Range (IQR) method.
+- `reduce_memory_usage_pl`: Optimizes memory usage of Polars DataFrames.
+- `detect_anomalies_iqr`: Detects anomalies in features using the IQR method.
 - `flag_anomalies`: Flags anomalies in specified features using the IQR method.
-- `calculate_cramers_v`: Computes Cramer's V statistic for
-  categorical-categorical association.
-- `handle_missing_values`: Handles missing data by dropping columns or rows
-  based on a threshold.
-- `simple_imputation`: Performs simple imputation on missing values in
-  training and testing datasets.
-- `confidence_interval`: Calculates the confidence interval for a given
-  dataset.
-- `create_pipeline`: Creates a scikit-learn pipeline for preprocessing and
-  modeling.
+- `calculate_cramers_v`: Computes Cramer's V statistic for categorical association.
+- `handle_missing_values`: Handles missing data by dropping columns or rows.
+- `impute_numerical_features`: Performs KNN imputation on numerical values.
+- `impute_categorical_features`: Performs mode imputation on categorical values.
+- `count_duplicated_rows`: Counts duplicated rows in a Polars DataFrame.
+- `get_top_missing_value_percentages`: Retrieves top N columns with highest
+  missing percentages.
+- `analyze_missing_values`: Analyzes and prints top N missing value columns.
+- `confidence_interval`: Calculates the confidence interval for a dataset.
+- `create_pipeline`: Creates a scikit-learn pipeline for preprocessing and modeling.
+- `create_stratified_sample`: Creates a stratified sample from a Polars DataFrame.
+- `calculate_cliff_delta`: Calculates Cliff's delta, a non-parametric effect size.
+- `initial_feature_reduction`: Reduces features based on missing values,
+  variance, and correlation.
 
 This module is intended for use in data preprocessing and feature engineering,
 with functions designed to handle common tasks in machine learning pipelines,
@@ -30,9 +34,8 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from scipy import stats
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
 from sklearn.impute import KNNImputer
+from sklearn.pipeline import Pipeline
 
 
 def reduce_memory_usage_pl(
@@ -40,25 +43,19 @@ def reduce_memory_usage_pl(
 ) -> pl.DataFrame:
     """Reduces memory usage of a Polars DataFrame by optimizing data types.
 
-    This function attempts to downcast numeric columns to the smallest possible
-    data type that can represent the data without loss of information. It also
-    converts string columns to categorical type.
+    Attempts to downcast numeric columns to the smallest possible data type
+    that can represent the data without loss of information. Also converts
+    string columns to categorical type.
 
     Args:
         df: A Polars DataFrame to optimize.
-        verbose: If True, print memory usage before and after optimization.
+        verbose: If True, prints memory usage before and after optimization.
 
     Returns:
         A Polars DataFrame with optimized memory usage.
-
-    References:
-        Adapted from:
-        https://www.kaggle.com/code/demche/polars-memory-usage-optimization
-        Original pandas version:
-        https://www.kaggle.com/code/arjanso/reducing-dataframe-memory-size-by-65
     """
     if verbose:
-        print(f"Size before memory reduction: {df.estimated_size('mb'):.2f} MB")
+        print(f"Size before reduction: {df.estimated_size('mb'):.2f} MB")
         print(f"Initial data types: {Counter(df.dtypes)}")
 
     numeric_int_types = [pl.Int8, pl.Int16, pl.Int32, pl.Int64]
@@ -68,221 +65,43 @@ def reduce_memory_usage_pl(
         col_type = df[col].dtype
 
         if col_type in numeric_int_types:
-            c_min = df[col].min() * 10  # Prevent possible integer overflow
-            c_max = df[col].max() * 10
+            c_min = df[col].min().item()
+            c_max = df[col].max().item()
 
-            if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+            if np.iinfo(np.int8).min <= c_min <= c_max <= np.iinfo(np.int8).max:
                 new_type = pl.Int8
-            elif (
-                c_min > np.iinfo(np.int16).min
-                and c_max < np.iinfo(np.int16).max
-            ):
+            elif np.iinfo(np.int16).min <= c_min <= c_max <= np.iinfo(
+                np.int16
+            ).max:
                 new_type = pl.Int16
-            elif (
-                c_min > np.iinfo(np.int32).min
-                and c_max < np.iinfo(np.int32).max
-            ):
+            elif np.iinfo(np.int32).min <= c_min <= c_max <= np.iinfo(
+                np.int32
+            ).max:
                 new_type = pl.Int32
             else:
                 new_type = pl.Int64
 
-            df = df.with_columns(df[col].cast(new_type))
+            if new_type != col_type:
+                df = df.with_columns(pl.col(col).cast(new_type))
 
         elif col_type in numeric_float_types:
-            c_min, c_max = df[col].min(), df[col].max()
+            c_min = df[col].min().item()
+            c_max = df[col].max().item()
             if (
-                c_min > np.finfo(np.float32).min
-                and c_max < np.finfo(np.float32).max
+                np.finfo(np.float32).min <= c_min <= c_max <= np.finfo(
+                    np.float32
+                ).max
             ):
-                df = df.with_columns(df[col].cast(pl.Float32))
+                df = df.with_columns(pl.col(col).cast(pl.Float32))
 
-        elif col_type == pl.String:
-            df = df.with_columns(df[col].cast(pl.Categorical))
+        elif col_type == pl.Utf8:
+            df = df.with_columns(pl.col(col).cast(pl.Categorical))
 
     if verbose:
-        print(f"Size after memory reduction: {df.estimated_size('mb'):.2f} MB")
+        print(f"Size after reduction: {df.estimated_size('mb'):.2f} MB")
         print(f"Final data types: {Counter(df.dtypes)}")
 
     return df
-
-
-def initial_feature_reduction(
-    train_df: pl.DataFrame,
-    test_df: pl.DataFrame,
-    target_col: str,
-    missing_threshold: float = 0.5,
-    variance_threshold: float = 0.01,
-    correlation_threshold: float = 0.05,
-    essential_features: List[str] = None,
-) -> Tuple[pl.DataFrame, pl.DataFrame]:
-    """Reduces features based on missing values, variance, and correlation.
-
-    This function performs feature reduction on the input DataFrames based on
-    missing values, variance, and correlation with the target variable, while
-    ensuring that essential features are always retained.
-
-    Args:
-        train_df: Training DataFrame.
-        test_df: Testing DataFrame.
-        target_col: The name of the target variable column.
-        missing_threshold: Max allowable missing value ratio. Defaults to 0.5.
-        variance_threshold: Min variance required. Defaults to 0.01.
-        correlation_threshold: Min absolute correlation with target.
-            Defaults to 0.05.
-        essential_features: List of features to always keep, regardless of
-            reduction criteria. Defaults to None.
-
-    Returns:
-        A tuple containing the reduced train and test DataFrames.
-
-    Raises:
-        ValueError: If the target column is not in the training DataFrame.
-    """
-    if target_col not in train_df.columns:
-        raise ValueError(
-            f"Target column '{target_col}' not found in training data."
-        )
-
-    essential_features = essential_features or []
-
-    combined_df = pl.concat([train_df.drop(target_col), test_df])
-    total_rows = len(combined_df)
-
-    cols_to_keep_missing = _filter_by_missing_values(
-        combined_df.drop(essential_features), total_rows, missing_threshold
-    )
-    filtered_df = combined_df.select(cols_to_keep_missing + essential_features)
-
-    numeric_cols = _get_numeric_columns(filtered_df)
-    numeric_cols = [
-        col for col in numeric_cols if col not in essential_features
-    ]
-
-    cols_to_keep_variance = _filter_by_variance(
-        filtered_df, numeric_cols, variance_threshold
-    )
-
-    cols_to_keep_correlation = _filter_by_correlation(
-        train_df, numeric_cols, target_col, correlation_threshold
-    )
-
-    final_cols = list(
-        set(cols_to_keep_missing)
-        & set(cols_to_keep_variance)
-        & set(cols_to_keep_correlation)
-    )
-    final_cols.extend(
-        [col for col in cols_to_keep_missing if col not in numeric_cols]
-    )
-    final_cols.extend(essential_features)
-
-    return (
-        train_df.select([target_col] + final_cols),
-        test_df.select(final_cols),
-    )
-
-
-def impute_numerical_features(train_df, test_df, target_col):
-    """Imputes missing values in numerical features using KNNImputer.
-
-    Args:
-        train_df: Polars DataFrame for the training set.
-        test_df: Polars DataFrame for the test set.
-        target_col: Name of the target column in the training set.
-
-    Returns:
-        Tuple of imputed training and test DataFrames.
-    """
-    if not train_df.shape[0] or not test_df.shape[0]:
-        print(
-            "Warning: One of the DataFrames is empty. Skipping numerical imputation."
-        )
-        return train_df, test_df
-
-    numerical_features = [
-        col
-        for col, dtype in zip(train_df.columns, train_df.dtypes)
-        if dtype
-        in (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.Float32, pl.Float64)
-        and col != target_col
-    ]
-
-    if not numerical_features:
-        print(
-            "Warning: No numerical features found. Skipping numerical imputation."
-        )
-        return train_df, test_df
-
-    imputer = KNNImputer(n_neighbors=5)
-
-    train_target = train_df[target_col]
-    train_features = train_df.drop(target_col)
-
-    train_numerical_pd = train_features[numerical_features].to_pandas()
-    test_numerical_pd = test_df[numerical_features].to_pandas()
-
-    train_numerical_imputed = imputer.fit_transform(train_numerical_pd)
-    test_numerical_imputed = imputer.transform(test_numerical_pd)
-
-    train_numerical_imputed_df = pl.DataFrame(
-        train_numerical_imputed, schema=numerical_features
-    )
-    test_numerical_imputed_df = pl.DataFrame(
-        test_numerical_imputed, schema=numerical_features
-    )
-
-    train_df = (
-        train_features.drop(numerical_features)
-        .hstack(train_numerical_imputed_df)
-        .with_columns(train_target)
-    )
-
-    test_df = test_df.drop(numerical_features).hstack(test_numerical_imputed_df)
-
-    return train_df, test_df
-
-
-def impute_categorical_features(train_df, test_df, target_col):
-    """Imputes missing values in categorical features using the mode.
-
-    Args:
-        train_df: Polars DataFrame for the training set.
-        test_df: Polars DataFrame for the test set.
-        target_col: Name of the target column in the training set.
-
-    Returns:
-        Tuple of imputed training and test DataFrames.
-    """
-    if not train_df.shape[0] or not test_df.shape[0]:
-        print(
-            "Warning: One of the DataFrames is empty. Skipping categorical imputation."
-        )
-        return train_df, test_df
-
-    categorical_features = [
-        col
-        for col, dtype in zip(train_df.columns, train_df.dtypes)
-        if dtype == pl.Categorical and col != target_col
-    ]
-
-    if not categorical_features:
-        print("Warning: No categorical features found. Skipping imputation.")
-        return train_df, test_df
-
-    for col in categorical_features:
-        train_df = train_df.with_columns(pl.col(col).fill_null("mode"))
-        test_df = test_df.with_columns(pl.col(col).fill_null("mode"))
-
-    return train_df, test_df
-
-
-def count_duplicated_rows(dataframe: pl.DataFrame) -> None:
-    """
-    Count and print the number of duplicated rows in a Polars DataFrame
-    (based on all columns).
-    """
-    num_duplicated_rows = dataframe.is_duplicated().sum()
-    print(f"The DataFrame contains {num_duplicated_rows} duplicated rows.")
 
 
 def _filter_by_missing_values(
@@ -298,11 +117,12 @@ def _filter_by_missing_values(
     Returns:
         List of column names that pass the missing value filter.
     """
-    missing_ratios = df.null_count() / total_rows
+    missing_counts = df.null_count()
+    missing_ratios = {
+        col: count / total_rows for col, count in zip(df.columns, missing_counts.row(0))
+    }
     return [
-        col
-        for col, ratio in zip(df.columns, missing_ratios.to_numpy()[0])
-        if ratio <= threshold
+        col for col, ratio in missing_ratios.items() if ratio <= threshold
     ]
 
 
@@ -339,8 +159,11 @@ def _filter_by_variance(
     Returns:
         List of column names that pass the variance filter.
     """
-    variances = df.select(columns).var().to_dict(as_series=False)
-    return [col for col, var in variances.items() if var[0] > threshold]
+    variances = df.select(columns).var()
+    variances_dict = {
+        col: var[0] for col, var in variances.to_dict(as_series=False).items()
+    }
+    return [col for col, var in variances_dict.items() if var > threshold]
 
 
 def _filter_by_correlation(
@@ -360,28 +183,204 @@ def _filter_by_correlation(
 
     def correlation_with_target(col: str) -> float:
         """Calculates absolute Pearson correlation with the target."""
-        x = df[col].to_numpy()
-        y = df[target_col].to_numpy()
+        x = df[col].to_numpy().astype(float)
+        y = df[target_col].to_numpy().astype(float)
         mask = ~np.isnan(x) & ~np.isnan(y)
-        return np.abs(np.corrcoef(x[mask], y[mask])[0, 1])
+        if np.sum(mask) < 2:
+            return 0.0
+        corr = np.corrcoef(x[mask], y[mask])[0, 1]
+        return abs(corr) if not np.isnan(corr) else 0.0
 
     correlations = {col: correlation_with_target(col) for col in columns}
-    return ["amt_income_total"] + [
-        col
-        for col, corr in correlations.items()
-        if corr > threshold and col != "amt_income_total"
+    return [col for col, corr in correlations.items() if corr >= threshold]
+
+
+def initial_feature_reduction(
+    train_df: pl.DataFrame,
+    test_df: pl.DataFrame,
+    target_col: str,
+    missing_threshold: float = 0.3,
+    variance_threshold: float = 0.01,
+    correlation_threshold: float = 0.05,
+    essential_features: List[str] = None,
+) -> Tuple[pl.DataFrame, pl.DataFrame]:
+    """Reduces features based on missing values, variance, and correlation.
+
+    Args:
+        train_df: Training DataFrame.
+        test_df: Testing DataFrame.
+        target_col: The name of the target variable column.
+        missing_threshold: Max allowable missing value ratio. Defaults to 0.3.
+        variance_threshold: Min variance required. Defaults to 0.01.
+        correlation_threshold: Min absolute correlation with target.
+            Defaults to 0.05.
+        essential_features: List of features to always keep. Defaults to None.
+
+    Returns:
+        A tuple containing the reduced train and test DataFrames.
+
+    Raises:
+        ValueError: If the target column is not in the training DataFrame.
+    """
+    if target_col not in train_df.columns:
+        raise ValueError(f"Target column '{target_col}' not found in training data.")
+
+    essential_features = essential_features or []
+
+    combined_df = pl.concat([train_df.drop(target_col), test_df])
+    total_rows = combined_df.height
+
+    cols_missing = _filter_by_missing_values(
+        combined_df.drop(essential_features), total_rows, missing_threshold
+    )
+    filtered_df = combined_df.select(cols_missing + essential_features)
+
+    numeric_cols = _get_numeric_columns(filtered_df)
+    numeric_cols = [col for col in numeric_cols if col not in essential_features]
+
+    cols_variance = _filter_by_variance(filtered_df, numeric_cols, variance_threshold)
+    cols_correlation = _filter_by_correlation(
+        train_df, numeric_cols, target_col, correlation_threshold
+    )
+
+    final_numeric_cols = list(
+        set(cols_missing) & set(cols_variance) & set(cols_correlation)
+    )
+
+    non_numeric_cols = [
+        col for col in cols_missing if col not in numeric_cols
     ]
+
+    final_cols = final_numeric_cols + non_numeric_cols + essential_features
+
+    seen = set()
+    final_cols = [x for x in final_cols if not (x in seen or seen.add(x))]
+
+    reduced_train = train_df.select([target_col] + final_cols)
+    reduced_test = test_df.select(final_cols)
+
+    return reduced_train, reduced_test
+
+
+def impute_numerical_features(
+    train_df: pl.DataFrame, test_df: pl.DataFrame, target_col: str
+) -> Tuple[pl.DataFrame, pl.DataFrame]:
+    """Imputes missing values in numerical features using KNNImputer.
+
+    Args:
+        train_df: Polars DataFrame for the training set.
+        test_df: Polars DataFrame for the test set.
+        target_col: Name of the target column in the training set.
+
+    Returns:
+        Tuple of imputed training and test DataFrames.
+    """
+    if train_df.is_empty() or test_df.is_empty():
+        print("Warning: One of the DataFrames is empty. Skipping numerical imputation.")
+        return train_df, test_df
+
+    numerical_features = [
+        col
+        for col, dtype in zip(train_df.columns, train_df.dtypes)
+        if dtype in (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.Float32, pl.Float64)
+        and col != target_col
+    ]
+
+    if not numerical_features:
+        print("Warning: No numerical features found. Skipping numerical imputation.")
+        return train_df, test_df
+
+    imputer = KNNImputer(n_neighbors=5)
+
+    train_target = train_df[target_col]
+    train_features = train_df.drop(target_col)
+
+    train_numerical_pd = train_features.select(numerical_features).to_pandas()
+    test_numerical_pd = test_df.select(numerical_features).to_pandas()
+
+    imputer.fit(train_numerical_pd)
+    train_numerical_imputed = imputer.transform(train_numerical_pd)
+    test_numerical_imputed = imputer.transform(test_numerical_pd)
+
+    train_numerical_imputed_df = pl.from_pandas(
+        pd.DataFrame(train_numerical_imputed, columns=numerical_features)
+    )
+    test_numerical_imputed_df = pl.from_pandas(
+        pd.DataFrame(test_numerical_imputed, columns=numerical_features)
+    )
+
+    train_df = (
+        train_features.drop(numerical_features)
+        .hstack(train_numerical_imputed_df)
+        .with_columns(pl.Series(name=target_col, values=train_target))
+    )
+
+    test_df = test_df.drop(numerical_features).hstack(test_numerical_imputed_df)
+
+    return train_df, test_df
+
+
+def impute_categorical_features(
+    train_df: pl.DataFrame, test_df: pl.DataFrame, target_col: str
+) -> Tuple[pl.DataFrame, pl.DataFrame]:
+    """Imputes missing values in categorical features using the mode.
+
+    Args:
+        train_df: Polars DataFrame for the training set.
+        test_df: Polars DataFrame for the test set.
+        target_col: Name of the target column in the training set.
+
+    Returns:
+        Tuple of imputed training and test DataFrames.
+    """
+    if train_df.is_empty() or test_df.is_empty():
+        print(
+            "Warning: One of the DataFrames is empty. "
+            "Skipping categorical imputation."
+        )
+        return train_df, test_df
+
+    categorical_features = [
+        col
+        for col, dtype in zip(train_df.columns, train_df.dtypes)
+        if dtype == pl.Categorical and col != target_col
+    ]
+
+    if not categorical_features:
+        print("Warning: No categorical features found. Skipping imputation.")
+        return train_df, test_df
+
+    for col in categorical_features:
+        value_counts_df = train_df[col].value_counts()
+        mode_value = (
+            value_counts_df
+            .sort("count", descending=True)
+            .get_column(col)[0]
+        )
+        if pd.isnull(mode_value):
+            mode_value = "Unknown"
+
+        train_df = train_df.with_columns(pl.col(col).fill_null(mode_value))
+        test_df = test_df.with_columns(pl.col(col).fill_null(mode_value))
+
+    return train_df, test_df
+
+
+def count_duplicated_rows(dataframe: pl.DataFrame) -> None:
+    """Counts and prints the number of duplicated rows in a Polars DataFrame."""
+    num_duplicated_rows = dataframe.filter(dataframe.is_duplicated()).height
+    print(f"The DataFrame contains {num_duplicated_rows} duplicated rows.")
 
 
 def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
     """Detects anomalies in multiple features using the IQR method.
 
     Args:
-        df (pd.DataFrame): DataFrame containing the data.
-        features (List[str]): List of features to detect anomalies in.
+        df: DataFrame containing the data.
+        features: List of features to detect anomalies in.
 
     Returns:
-        pd.DataFrame: DataFrame containing the anomalies for each feature.
+        DataFrame containing the anomalies for each feature.
     """
     anomalies_list = []
 
@@ -391,7 +390,7 @@ def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
             continue
 
         if not np.issubdtype(df[feature].dtype, np.number):
-            print(f"Feature '{feature}' is not numerical and will be skipped.")
+            print(f"Feature '{feature}' is not numerical. Skipping.")
             continue
 
         q1 = df[feature].quantile(0.25)
@@ -405,14 +404,12 @@ def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
         if not feature_anomalies.empty:
             print(f"Anomalies detected in feature '{feature}':")
             print(feature_anomalies)
+            anomalies_list.append(feature_anomalies)
         else:
             print(f"No anomalies detected in feature '{feature}'.")
-        anomalies_list.append(feature_anomalies)
 
     if anomalies_list:
-        anomalies = (
-            pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
-        )
+        anomalies = pd.concat(anomalies_list).drop_duplicates().reset_index(drop=True)
         anomalies = anomalies[features]
     else:
         anomalies = pd.DataFrame(columns=features)
@@ -421,72 +418,77 @@ def detect_anomalies_iqr(df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
 
 
 def flag_anomalies(df: pd.DataFrame, features: List[str]) -> pd.Series:
-    """
-    Identify and flag anomalies in a DataFrame based on the Interquartile Range
-    (IQR) method for specified features.
+    """Flags anomalies in specified features using the IQR method.
 
     Args:
-        df (pd.DataFrame): The input DataFrame containing the data.
-        features (List[str]): A list of column names in the DataFrame to check for
-        anomalies.
+        df: The input DataFrame.
+        features: List of feature names to check for anomalies.
 
     Returns:
-        pd.Series: A Series of boolean values where True indicates an anomaly in
-        any of the specified features.
+        A Series of boolean values where True indicates an anomaly.
     """
     anomaly_flags = pd.Series(False, index=df.index)
 
     for feature in features:
-        first_quartile = df[feature].quantile(0.25)
-        third_quartile = df[feature].quantile(0.75)
-        interquartile_range = third_quartile - first_quartile
-        lower_bound = first_quartile - 1.5 * interquartile_range
-        upper_bound = third_quartile + 1.5 * interquartile_range
+        if feature not in df.columns:
+            print(f"Feature '{feature}' not found in DataFrame.")
+            continue
 
-        feature_anomalies = (df[feature] < lower_bound) | (
-            df[feature] > upper_bound
-        )
+        if not np.issubdtype(df[feature].dtype, np.number):
+            print(f"Feature '{feature}' is not numerical. Skipping.")
+            continue
+
+        q1 = df[feature].quantile(0.25)
+        q3 = df[feature].quantile(0.75)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+
+        feature_anomalies = (df[feature] < lower_bound) | (df[feature] > upper_bound)
         anomaly_flags |= feature_anomalies
 
     return anomaly_flags
 
 
-def calculate_cramers_v(x, y):
-    """
-    Calculates Cramer's V statistic for categorical-categorical association.
+def calculate_cramers_v(x: pd.Series, y: pd.Series) -> float:
+    """Calculates Cramer's V statistic for categorical-categorical association.
 
     Args:
-        x: pandas Series
-        y: pandas Series
+        x: Categorical feature.
+        y: Categorical target or feature.
 
     Returns:
-        float: Cramer's V
+        Cramer's V statistic.
     """
     confusion_matrix = pd.crosstab(x, y)
-    chi2 = stats.chi2_contingency(confusion_matrix)[0]
+    chi2, _, _, _ = stats.chi2_contingency(confusion_matrix)
     n = confusion_matrix.sum().sum()
-    min_dim = min(confusion_matrix.shape) - 1
-    return np.sqrt(chi2 / (n * min_dim))
+    phi2 = chi2 / n
+    r, k = confusion_matrix.shape
+    phi2corr = max(0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
+    rcorr = r - ((r - 1) ** 2) / (n - 1)
+    kcorr = k - ((k - 1) ** 2) / (n - 1)
+    if rcorr == 0 or kcorr == 0:
+        return 0.0
+    return np.sqrt(phi2corr / min((kcorr - 1), (rcorr - 1)))
 
 
 def get_top_missing_value_percentages(
     df: pl.DataFrame, top_n: int = 5
 ) -> pl.DataFrame:
-    """Calculates the percentage of missing values for each column in a Polars DataFrame
-    and returns the top N columns with the highest percentage of missing values.
+    """Retrieves top N columns with highest missing value percentages.
 
     Args:
-        df: The Polars DataFrame to analyze for missing values.
-        top_n: The number of top columns to return (default is 5).
+        df: The Polars DataFrame to analyze.
+        top_n: The number of top columns to return.
 
     Returns:
-        pl.DataFrame: A Polars DataFrame with columns for column names and missing
-        value percentages.
+        DataFrame with columns for names and missing value percentages.
     """
     total_rows = df.height
     missing_counts = df.null_count().row(0)
     missing_percentages = [
-        {"column": col, "missing_percentage": count / total_rows * 100}
+        {"column": col, "missing_percentage": (count / total_rows) * 100}
         for col, count in zip(df.columns, missing_counts)
         if count > 0
     ]
@@ -505,48 +507,47 @@ def get_top_missing_value_percentages(
 def analyze_missing_values(
     train_df: pl.DataFrame, test_df: pl.DataFrame, top_n: int = 5
 ) -> None:
-    """Analyzes and prints the top N columns with the highest percentage of missing values
-    for both train and test DataFrames.
+    """Analyzes and prints top N missing value columns for train and test sets.
 
     Args:
         train_df: The training Polars DataFrame.
         test_df: The testing Polars DataFrame.
-        top_n: The number of top columns to display (default is 5).
+        top_n: The number of top columns to display.
     """
     train_missing = get_top_missing_value_percentages(train_df, top_n)
     test_missing = get_top_missing_value_percentages(test_df, top_n)
 
-    if train_missing.is_empty():
-        print("No missing values found in the reduced train set.")
-    else:
-        print(f"Top {top_n} columns with missing values in reduced train set:")
+    if not train_missing.is_empty():
+        print(f"Top {top_n} columns with missing values in train set:")
         print(train_missing)
-
-    if test_missing.is_empty():
-        print("No missing values found in the reduced test set.")
     else:
-        print(f"\nTop {top_n} columns with missing values in reduced test set:")
+        print("No missing values found in the train set.")
+
+    if not test_missing.is_empty():
+        print(f"\nTop {top_n} columns with missing values in test set:")
         print(test_missing)
+    else:
+        print("No missing values found in the test set.")
 
 
 def confidence_interval(
     data: List[float], confidence: float = 0.95
 ) -> Tuple[float, float, float]:
-    """
-    Calculates the confidence interval for a given dataset.
+    """Calculates the confidence interval for a given dataset.
 
     Args:
-        data (List[float]): A list of numerical data points.
-        confidence (float): The confidence level for the interval. Defaults to 0.95.
+        data: A list of numerical data points.
+        confidence: The confidence level for the interval.
 
     Returns:
-        Tuple[float, float, float]: A tuple containing the mean, lower bound, and
-        upper bound of the confidence interval.
+        A tuple containing the mean, lower bound, and upper bound.
     """
     array_data = np.array(data, dtype=float)
     sample_size = len(array_data)
     mean_value = np.mean(array_data)
     standard_error = stats.sem(array_data)
+    if sample_size < 2:
+        return mean_value, np.nan, np.nan
     margin_of_error = standard_error * stats.t.ppf(
         (1 + confidence) / 2.0, sample_size - 1
     )
@@ -558,20 +559,15 @@ def confidence_interval(
 
 
 def create_pipeline(preprocessor: Pipeline, model: Pipeline) -> Pipeline:
-    """
-    Create a machine learning pipeline with a preprocessor and a classifier.
+    """Creates a machine learning pipeline with a preprocessor and a classifier.
 
-    Parameters:
-        preprocessor (sklearn.base.TransformerMixin): The preprocessing component
-        of the pipeline.
-        model (sklearn.base.BaseEstimator): The classifier component of the
-        pipeline.
+    Args:
+        preprocessor: The preprocessing component of the pipeline.
+        model: The classifier component of the pipeline.
 
     Returns:
-        sklearn.pipeline.Pipeline: A scikit-learn Pipeline object that sequentially
-        applies the preprocessor and the classifier.
+        A scikit-learn Pipeline object.
     """
-
     return Pipeline([("preprocessor", preprocessor), ("classifier", model)])
 
 
@@ -581,31 +577,29 @@ def create_stratified_sample(
     sample_size: int,
     random_state: int = 42,
 ) -> pd.DataFrame:
-    """
-    Creates a stratified sample from a Polars DataFrame, preserving class
-    proportions of the target variable.
+    """Creates a stratified sample from a Polars DataFrame.
 
     Args:
         data: The Polars DataFrame to sample from.
         target_column: The name of the target variable column.
         sample_size: The desired sample size.
-        random_state: Seed for the random number generator (for reproducibility).
+        random_state: Seed for reproducibility.
 
     Returns:
         A Pandas DataFrame containing the stratified sample.
     """
-    features_df = data.drop(target_column)
-    target_series = data[target_column]
+    if target_column not in data.columns:
+        raise ValueError(f"Target column '{target_column}' not found in DataFrame.")
 
-    _, sample_features, _, sample_target = train_test_split(
-        features_df.to_pandas(),
-        target_series.to_pandas(),
-        test_size=sample_size,
-        stratify=target_series.to_pandas(),
-        random_state=random_state,
+    total_rows = len(data)
+    if sample_size > total_rows:
+        raise ValueError("Sample size cannot exceed total number of rows.")
+
+    fraction = sample_size / total_rows
+    sampled_df = data.to_pandas().groupby(target_column, group_keys=False).apply(
+        lambda x: x.sample(frac=fraction, random_state=random_state)
     )
-
-    return pd.concat([sample_features, sample_target], axis=1)
+    return sampled_df.reset_index(drop=True)
 
 
 def calculate_cliff_delta(
@@ -613,41 +607,25 @@ def calculate_cliff_delta(
 ) -> Union[float, np.float64]:
     """Calculates Cliff's delta, a non-parametric effect size measure.
 
-    Cliff's delta quantifies the difference between two groups.  It represents
-    the probability that a randomly selected observation from one group is
-    higher than a randomly selected observation from the other group, minus
-    the reverse probability.
-
     Args:
         df: The input DataFrame containing the feature and target columns.
-        feature: The name of the feature column (numerical).
-        target: The name of the target column (binary: 0 or 1).
+        feature: The name of the numerical feature column.
+        target: The name of the binary target column (0 or 1).
 
     Returns:
-        Cliff's delta, a value between -1 and 1.  Returns np.nan if either
-        group is empty.  A positive value indicates that the feature values
-        in the target=1 group tend to be larger.  A negative value indicates
-        the opposite.  A value close to 0 indicates little difference
-        between the groups.
+        Cliff's delta, a value between -1 and 1.
     """
-    group1 = df[df[target] == 0][feature].dropna()
-    group2 = df[df[target] == 1][feature].dropna()
+    group1 = df[df[target] == 0][feature].dropna().values
+    group2 = df[df[target] == 1][feature].dropna().values
 
-    n1: int = len(group1)
-    n2: int = len(group2)
+    n1 = len(group1)
+    n2 = len(group2)
 
     if n1 == 0 or n2 == 0:
         return np.nan
 
-    diffs: np.ndarray = np.zeros((n1, n2))
-    for i, val1 in enumerate(group1):
-        for j, val2 in enumerate(group2):
-            if val1 > val2:
-                diffs[i, j] = 1
-            elif val1 < val2:
-                diffs[i, j] = -1
-            else:
-                diffs[i, j] = 0
+    greater = np.sum(group1[:, None] > group2)
+    less = np.sum(group1[:, None] < group2)
 
-    cliff_d: np.float64 = (2 * np.sum(diffs)) / (n1 * n2) - 1
+    cliff_d = (greater - less) / (n1 * n2)
     return cliff_d
