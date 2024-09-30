@@ -165,4 +165,4 @@ cython_debug/
 .DS_Store
 retail_bank_risk_evaluation.html
 retail_bank_risk_evaluation.pdf
-/Users/vytautasbunevicius/retail-bank-risk-evaluation/models
+models/
