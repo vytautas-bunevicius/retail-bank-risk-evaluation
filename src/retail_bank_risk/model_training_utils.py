@@ -25,7 +25,6 @@ import re
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 import pickle
-from joblib import parallel_backend
 import lightgbm as lgb
 import numpy as np
 import optuna
@@ -39,96 +38,89 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     roc_auc_score,
-    make_scorer,
     fbeta_score,
 )
-from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn.pipeline import FunctionTransformer
-from sklearn.model_selection import cross_val_predict
-
-
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import FunctionTransformer, Pipeline
+from sklearn.model_selection import StratifiedKFold
 
 
 def evaluate_model(
     name: str,
     model: Union[Pipeline, Any],
-    x: np.ndarray,
-    y: np.ndarray,
+    x_train: pd.DataFrame,
+    y_train: np.ndarray,
+    x_val: pd.DataFrame,
+    y_val: np.ndarray,
     checkpoint_dir: str = "../models",
+    is_tuned: bool = False
 ) -> Dict[str, Any]:
     """
-    Evaluate a machine learning model using cross-validation and save checkpoints.
+    Evaluate a machine learning model using a separate validation set and save checkpoints.
 
     This function performs the following steps:
     1. Loads a checkpoint if it exists
-    2. Performs stratified k-fold cross-validation only if necessary
-    3. Calculates performance metrics (precision, recall, F1-score, AUC-ROC)
-    4. Saves checkpoint with results if new evaluation was performed
+    2. Trains the model on the training data if necessary
+    3. Makes predictions on the validation set
+    4. Calculates performance metrics (precision, recall, F1-score, F2-score, AUC-ROC)
+    5. Saves checkpoint with results if new evaluation was performed
 
     Args:
         name (str): Name of the model being evaluated.
         model (Union[Pipeline, Any]): The machine learning model or pipeline to evaluate.
-        x (np.ndarray): Feature matrix.
-        y (np.ndarray): Target vector.
+        x_train (pd.DataFrame): Training feature data.
+        y_train (np.ndarray): Training target data.
+        x_val (pd.DataFrame): Validation feature data.
+        y_val (np.ndarray): Validation target data.
         checkpoint_dir (str): Directory to save/load model checkpoints.
+        is_tuned (bool): Flag indicating if the model is a result of hyperparameter tuning.
 
     Returns:
         Dict[str, Any]: A dictionary containing the model name and performance metrics.
     """
-    print(f"Evaluating {name}...")
+    print(f"Evaluating {'tuned ' if is_tuned else ''}{name}...")
 
-    checkpoint = load_checkpoint(name, checkpoint_dir)
-    if (
-        checkpoint
-        and isinstance(checkpoint, dict)
-        and "y_pred" in checkpoint
-        and "y_pred_proba" in checkpoint
-    ):
-        print(f"Resumed from checkpoint for model {name}.")
-        model = checkpoint.get(
-            "model", model
-        )  # Use stored model if available, else use the provided one
-        y_pred = checkpoint["y_pred"]
-        y_pred_proba = checkpoint["y_pred_proba"]
+    checkpoint = load_checkpoint(name, checkpoint_dir, is_tuned)
+    if checkpoint and isinstance(checkpoint, dict) and "model" in checkpoint:
+        print(f"Resumed from checkpoint for {'tuned ' if is_tuned else ''}model {name}.")
+        model = checkpoint["model"]
     else:
-        print(f"Performing cross-validation for {name}")
-        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-        y_pred = cross_val_predict(model, x, y, cv=cv, method="predict")
-        y_pred_proba = cross_val_predict(
-            model, x, y, cv=cv, method="predict_proba"
-        )[:, 1]
+        print(f"Training {'tuned ' if is_tuned else ''}model {name}")
+        model.fit(x_train, y_train)
+        save_checkpoint({"model": model}, name, checkpoint_dir, is_tuned)
+        print(f"Saved new checkpoint for {'tuned ' if is_tuned else ''}{name}")
 
-        save_checkpoint(
-            {"model": model, "y_pred": y_pred, "y_pred_proba": y_pred_proba},
-            name,
-            checkpoint_dir,
-        )
-        print(f"Saved new checkpoint for {name}")
+    y_pred = model.predict(x_val)
+    y_pred_proba = model.predict_proba(x_val)[:, 1]
 
-    precision = precision_score(y, y_pred)
-    recall = recall_score(y, y_pred)
-    f1 = f1_score(y, y_pred)
-    auc_roc = roc_auc_score(y, y_pred_proba)
+    precision = precision_score(y_val, y_pred)
+    recall = recall_score(y_val, y_pred)
+    f1 = f1_score(y_val, y_pred)
+    f2 = fbeta_score(y_val, y_pred, beta=2)
+    auc_roc = roc_auc_score(y_val, y_pred_proba)
 
-    print(f"{name} Cross-validation results:")
+    print(f"{'Tuned ' if is_tuned else ''}{name} Validation results:")
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
     print(f"F1-Score: {f1:.4f}")
+    print(f"F2-Score: {f2:.4f}")
     print(f"AUC-ROC: {auc_roc:.4f}")
     print("=" * 60 + "\n")
 
     return {
-        "model": name,
+        "model": f"{'tuned_' if is_tuned else ''}{name}",
         "precision": precision,
         "recall": recall,
         "f1_score": f1,
+        "f2_score": f2,
         "auc_roc": auc_roc,
     }
 
 
 def save_checkpoint(
-    data: Union[Dict[str, Any], Pipeline], name: str, directory: str
+    data: Union[Dict[str, Any], Pipeline],
+    name: str,
+    directory: str,
+    is_tuned: bool = False,
 ) -> None:
     """
     Save the model checkpoint and evaluation results to the specified directory.
@@ -137,52 +129,62 @@ def save_checkpoint(
         data (Union[Dict[str, Any], Pipeline]): Dictionary containing model and evaluation results, or a Pipeline object.
         name (str): Name of the model, used to generate the filename.
         directory (str): Directory path where the checkpoint will be saved.
+        is_tuned (bool): Flag indicating if the model is a result of hyperparameter tuning.
 
     Raises:
         IOError: If there's an issue writing the file.
     """
     os.makedirs(directory, exist_ok=True)
-    filename = f"{name.lower().replace(' ', '_')}_checkpoint.pkl"
+    prefix = "tuned_" if is_tuned else ""
+    filename = f"{prefix}{name.lower().replace(' ', '_')}_checkpoint.pkl"
     filepath = os.path.join(directory, filename)
     try:
         with open(filepath, "wb") as f:
             pickle.dump(data, f)
-        print(f"Saved checkpoint: {filepath}")
+        print(f"Saved {'tuned ' if is_tuned else ''}checkpoint: {filepath}")
         if isinstance(data, dict):
             print(f"Checkpoint contents: {list(data.keys())}")
         elif isinstance(data, Pipeline):
-            print("Saved Pipeline object as checkpoint")
+            print(
+                f"Saved {'tuned ' if is_tuned else ''}Pipeline object as checkpoint"
+            )
     except IOError as e:
         print(f"Error saving checkpoint: {e}")
         raise
 
 
-def load_checkpoint(name: str, directory: str) -> Optional[Dict[str, Any]]:
+def load_checkpoint(
+    name: str, directory: str, is_tuned: bool = False
+) -> Optional[Union[Dict[str, Any], Pipeline]]:
     """
     Load the model checkpoint and evaluation results from the specified directory.
 
     Args:
         name (str): Name of the model, used to generate the filename.
         directory (str): Directory path where the checkpoint file is located.
+        is_tuned (bool): Flag indicating if the model to load is a result of hyperparameter tuning.
 
     Returns:
-        Optional[Dict[str, Any]]: The loaded checkpoint data if successful, None otherwise.
+        Optional[Union[Dict[str, Any], Pipeline]]: The loaded checkpoint data if successful, None otherwise.
 
     Raises:
         IOError: If there's an issue reading the file.
     """
-    filename = f"{name.lower().replace(' ', '_')}_checkpoint.pkl"
+    prefix = "tuned_" if is_tuned else ""
+    filename = f"{prefix}{name.lower().replace(' ', '_')}_checkpoint.pkl"
     filepath = os.path.join(directory, filename)
     if os.path.exists(filepath):
         try:
             with open(filepath, "rb") as f:
                 data = pickle.load(f)
-            print(f"Loaded checkpoint: {filepath}")
+            print(
+                f"Loaded {'tuned ' if is_tuned else ''}checkpoint: {filepath}"
+            )
             return data
         except (IOError, pickle.UnpicklingError) as e:
             print(f"Error loading checkpoint: {e}")
             return None
-    print(f"No checkpoint found at: {filepath}")
+    print(f"No {'tuned ' if is_tuned else ''}checkpoint found at: {filepath}")
     return None
 
 
@@ -299,7 +301,7 @@ def downscale_dtypes(
     df_train = df_train.astype(downscale_actions)
 
     if df_test is not None:
-        
+
         test_downscale_actions = {
             col: dtype
             for col, dtype in downscale_actions.items()
@@ -430,6 +432,7 @@ def sanitize_feature_names(df: pd.DataFrame) -> pd.DataFrame:
 
 
 sanitize_transformer: Callable = FunctionTransformer(sanitize_feature_names)
+sanitizer = FunctionTransformer(sanitize_feature_names)
 
 
 def ensure_directory_exists(directory: str) -> None:
@@ -441,111 +444,138 @@ def ensure_directory_exists(directory: str) -> None:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+
 def optimize_hyperparameters(
-    x: pd.DataFrame,
-    y,
-    model_type,
-    n_trials=100,
-    cv=5,
-    random_state=42,
-    n_jobs=-1,
-    checkpoint_dir="../models",
-    study_name="hyperparameter_optimization",
-    storage="sqlite:///data/optuna_study.db",
-):
+    x_train: pd.DataFrame,
+    y_train: pd.Series,
+    x_val: pd.DataFrame,
+    y_val: pd.Series,
+    model_type: str,
+    n_trials: int = 100,
+    random_state: int = 42,
+    n_jobs: int = -1,
+    checkpoint_dir: str = "../models",
+    study_name: str = "hyperparameter_optimization",
+    storage: str = "sqlite:///data/optuna_study.db",
+    feature_selection_threshold: float = 0.1,
+    n_splits: int = 5  # Number of folds for cross-validation
+) -> Dict[str, Any]:
     """
-    Perform hyperparameter optimization using Optuna for xGBoost or LightGBM models,
-    focusing on maximizing the F2 score. Supports resuming from previous runs by using persistent storage.
-
-    Args:
-        x (pd.DataFrame): Features.
-        y: Target.
-        model_type (str): 'xgboost' or 'lightgbm'.
-        n_trials (int): Number of trials to run.
-        cv (int): Cross-validation folds.
-        random_state (int): Random seed for reproducibility.
-        n_jobs (int): Number of parallel jobs. If -1, all cores will be used.
-        checkpoint_dir (str): Directory to save model checkpoints.
-        study_name (str): Name of the Optuna study.
-        storage (str): SQLite storage for saving study data.
-
-    Returns:
-        dict: The best hyperparameters found.
-        float: The best F2 score achieved.
-        object: The best model loaded from the checkpoint.
+    Perform hyperparameter optimization using Optuna with cross-validation to prevent overfitting.
+    Uses a separate validation set for final evaluation.
     """
 
-    x_sanitized = sanitize_feature_names(x)
+    print(f"Optimizing hyperparameters for {model_type} using cross-validation...")
+
+    # Data validation function
+    def validate_data(X, y, name):
+        assert isinstance(X, pd.DataFrame), f"{name} X must be a pandas DataFrame"
+        assert isinstance(y, pd.Series), f"{name} y must be a pandas Series"
+        assert X.shape[0] == y.shape[0], f"{name} X and y must have the same number of samples"
+        assert not X.isnull().any().any(), f"{name} X contains null values"
+        assert not y.isnull().any(), f"{name} y contains null values"
+        print(f"{name} data validation passed. X shape: {X.shape}, y shape: {y.shape}")
+
+    # Validate training and validation data
+    validate_data(x_train, y_train, "Training")
+    validate_data(x_val, y_val, "Validation")
+
+    # Sanitize the data
+    x_train_sanitized = sanitizer.transform(x_train)
+    x_val_sanitized = sanitizer.transform(x_val)
 
     def objective(trial: Trial):
+        # Define hyperparameter search space
         if model_type == "xgboost":
             params = {
                 "max_depth": trial.suggest_int("max_depth", 3, 10),
-                "learning_rate": trial.suggest_loguniform(
-                    "learning_rate", 1e-3, 1.0
-                ),
+                "learning_rate": trial.suggest_loguniform("learning_rate", 1e-3, 1.0),
                 "n_estimators": trial.suggest_int("n_estimators", 50, 1000),
-                "min_child_weight": trial.suggest_int(
-                    "min_child_weight", 1, 10
-                ),
+                "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
                 "subsample": trial.suggest_uniform("subsample", 0.6, 1.0),
-                "colsample_bytree": trial.suggest_uniform(
-                    "colsample_bytree", 0.6, 1.0
-                ),
+                "colsample_bytree": trial.suggest_uniform("colsample_bytree", 0.6, 1.0),
                 "gamma": trial.suggest_loguniform("gamma", 1e-8, 1.0),
-                "scale_pos_weight": trial.suggest_loguniform(
-                    "scale_pos_weight", 1, 100
-                ),
+                "scale_pos_weight": trial.suggest_loguniform("scale_pos_weight", 1, 100),
                 "random_state": random_state,
+                "use_label_encoder": False,
+                "eval_metric": "logloss",
+                "n_jobs": n_jobs
             }
-            model = xgb.XGBClassifier(**params)
+            model_class = xgb.XGBClassifier
         elif model_type == "lightgbm":
             params = {
                 "num_leaves": trial.suggest_int("num_leaves", 20, 3000),
-                "learning_rate": trial.suggest_loguniform(
-                    "learning_rate", 1e-3, 1.0
-                ),
+                "learning_rate": trial.suggest_loguniform("learning_rate", 1e-3, 1.0),
                 "n_estimators": trial.suggest_int("n_estimators", 50, 1000),
-                "min_child_samples": trial.suggest_int(
-                    "min_child_samples", 1, 300
-                ),
+                "min_child_samples": trial.suggest_int("min_child_samples", 1, 300),
                 "subsample": trial.suggest_uniform("subsample", 0.6, 1.0),
-                "colsample_bytree": trial.suggest_uniform(
-                    "colsample_bytree", 0.6, 1.0
-                ),
+                "colsample_bytree": trial.suggest_uniform("colsample_bytree", 0.6, 1.0),
                 "reg_alpha": trial.suggest_loguniform("reg_alpha", 1e-8, 10.0),
-                "reg_lambda": trial.suggest_loguniform(
-                    "reg_lambda", 1e-8, 10.0
-                ),
+                "reg_lambda": trial.suggest_loguniform("reg_lambda", 1e-8, 10.0),
                 "class_weight": "balanced",
                 "random_state": random_state,
+                "n_jobs": n_jobs
             }
-            model = lgb.LGBMClassifier(**params)
+            model_class = lgb.LGBMClassifier
         else:
-            raise ValueError(
-                "model_type must be either 'xgboost' or 'lightgbm'"
-            )
+            raise ValueError("model_type must be either 'xgboost' or 'lightgbm'")
 
-        f2_scorer = make_scorer(fbeta_score, beta=2)
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+        f2_scores = []
 
-        with parallel_backend("loky"):
-            scores = cross_val_score(
-                model, x_sanitized, y, cv=cv, scoring=f2_scorer, n_jobs=n_jobs
-            )
+        try:
+            for train_idx, val_idx in cv.split(x_train_sanitized, y_train):
+                # Split data into training and validation folds
+                X_fold_train = x_train_sanitized.iloc[train_idx]
+                X_fold_val = x_train_sanitized.iloc[val_idx]
+                y_fold_train = y_train.iloc[train_idx]
+                y_fold_val = y_train.iloc[val_idx]
 
-        return scores.mean()
+                # Initialize and train the model
+                model = model_class(**params)
+                model.fit(X_fold_train, y_fold_train)
 
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    storage_dir = os.path.dirname(storage.replace("sqlite:///", ""))
-    if storage_dir:
-        os.makedirs(storage_dir, exist_ok=True)
+                # Get feature importances
+                importances = model.feature_importances_
+                feature_imp = pd.DataFrame({
+                    'Value': importances,
+                    'Feature': X_fold_train.columns
+                })
 
+                # Sort the DataFrame by 'Value' in descending order
+                feature_imp = feature_imp.sort_values(by='Value', ascending=False)
+
+                # Select top features
+                num_top_features = max(1, int(len(feature_imp) * feature_selection_threshold))
+                top_features = feature_imp.head(num_top_features)['Feature'].tolist()
+
+                # Retrain the model with selected features
+                X_fold_train_selected = X_fold_train[top_features]
+                X_fold_val_selected = X_fold_val[top_features]
+
+                model.fit(X_fold_train_selected, y_fold_train)
+                y_pred = model.predict(X_fold_val_selected)
+                f2 = fbeta_score(y_fold_val, y_pred, beta=2)
+                f2_scores.append(f2)
+
+        except Exception as e:
+            print(f"Error in trial: {str(e)}")
+            print(f"Current parameters: {trial.params}")
+            print(f"X_fold_train shape: {X_fold_train.shape}")
+            print(f"X_fold_val shape: {X_fold_val.shape}")
+            print(f"Selected features: {top_features}")
+            raise  # Re-raise the exception for Optuna to handle
+
+        # Return the mean F2 score across all folds
+        return np.mean(f2_scores)
+
+    # Set up the storage backend
     storage_backend = RDBStorage(url=storage)
+
+    # Try to load an existing study or create a new one
     try:
-        study = optuna.load_study(
-            study_name=study_name, storage=storage_backend
-        )
-        print(f"Loaded existing study '{study_name}'.")
+        study = optuna.load_study(study_name=study_name, storage=storage_backend)
+        print(f"Loaded existing study '{study_name}' with {len(study.trials)} trials.")
     except KeyError:
         study = optuna.create_study(
             study_name=study_name,
@@ -555,10 +585,76 @@ def optimize_hyperparameters(
         )
         print(f"Created new study '{study_name}'.")
 
-    study.optimize(objective, n_trials=n_trials, n_jobs=n_jobs)
+    # Run the optimization
+    study.optimize(objective, n_trials=n_trials, n_jobs=1)  # n_jobs=1 to avoid conflicts in parallel processing
 
-    best_model = load_checkpoint(
-        f"{model_type}_trial_{study.best_trial.number}", checkpoint_dir
+    # Retrieve the best parameters and retrain on the full training data
+    best_params = study.best_params
+    if model_type == "xgboost":
+        best_model = xgb.XGBClassifier(**best_params)
+    elif model_type == "lightgbm":
+        best_model = lgb.LGBMClassifier(**best_params)
+
+    # Fit the best model on the entire sanitized training data
+    best_model.fit(x_train_sanitized, y_train)
+
+    # Get feature importances from the best model
+    importances = best_model.feature_importances_
+    feature_imp = pd.DataFrame({
+        'Value': importances,
+        'Feature': x_train_sanitized.columns
+    })
+
+    # Sort the DataFrame by 'Value' in descending order
+    feature_imp = feature_imp.sort_values(by='Value', ascending=False)
+
+    # Select top features
+    num_top_features = max(1, int(len(feature_imp) * feature_selection_threshold))
+    top_features = feature_imp.head(num_top_features)['Feature'].tolist()
+
+    # Retrain the best model with selected features
+    x_train_selected = x_train_sanitized[top_features]
+    x_val_selected = x_val_sanitized[top_features]
+
+    best_model.fit(x_train_selected, y_train)
+
+    # Evaluate the best model on the validation set
+    y_pred = best_model.predict(x_val_selected)
+    y_pred_proba = best_model.predict_proba(x_val_selected)[:, 1]
+
+    precision = precision_score(y_val, y_pred)
+    recall = recall_score(y_val, y_pred)
+    f1 = f1_score(y_val, y_pred)
+    f2 = fbeta_score(y_val, y_pred, beta=2)
+    auc_roc = roc_auc_score(y_val, y_pred_proba)
+
+    print(f"{model_type.capitalize()} Best Model Validation Results:")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1-Score: {f1:.4f}")
+    print(f"F2-Score: {f2:.4f}")
+    print(f"AUC-ROC: {auc_roc:.4f}")
+    print(f"Number of selected features: {len(top_features)}")
+    print("=" * 60 + "\n")
+
+    # Save the best model checkpoint
+    model_name = f"{model_type}_best"
+    save_checkpoint(
+        {"model": best_model, "params": best_params, "selected_features": top_features},
+        model_name,
+        checkpoint_dir,
+        is_tuned=True
     )
+    print(f"Saved best tuned {model_type} model checkpoint.")
 
-    return study.best_params, study.best_value, best_model
+    # Return the results as a dictionary
+    return {
+        "model": f"tuned_{model_name}",
+        "best_params": best_params,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "f2_score": f2,
+        "auc_roc": auc_roc,
+        "selected_features": top_features
+    }
