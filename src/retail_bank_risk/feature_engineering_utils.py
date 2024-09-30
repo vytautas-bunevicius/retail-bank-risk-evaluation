@@ -18,7 +18,7 @@ from typing import List, Tuple, Dict
 import pandas as pd
 import numpy as np
 from category_encoders import LeaveOneOutEncoder, OneHotEncoder
-from sklearn.preprocessing import OrdinalEncoder
+from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
 
 
 def bin_age_into_groups(df: pd.DataFrame, age_column: str) -> pd.Series:
@@ -131,7 +131,8 @@ def create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
 def encode_categorical_features(
     df_train: pd.DataFrame,
     df_test: pd.DataFrame,
-    ohe_features: List[str],
+    binary_features: List[str],
+    categorical_features: List[str],
     target_encoded_features: List[str],
     ordinal_features: List[str],
     ordinal_orders: Dict[str, List],
@@ -139,14 +140,16 @@ def encode_categorical_features(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Encodes categorical features using various encoding methods.
 
-    This function performs One-Hot Encoding for low-cardinality features,
-    Leave-One-Out Encoding for high-cardinality features, and Ordinal Encoding
-    for features with a natural order.
+    This function performs Label Encoding for binary features,
+    One-Hot Encoding for low-cardinality categorical features,
+    Leave-One-Out Encoding for high-cardinality features, and
+    Ordinal Encoding for features with a natural order.
 
     Args:
         df_train: The training dataframe.
         df_test: The testing dataframe.
-        ohe_features: List of column names to be One-Hot encoded.
+        binary_features: List of binary features to be Label encoded.
+        categorical_features: List of column names to be One-Hot encoded.
         target_encoded_features: List of columns to be Leave-One-Out encoded.
         ordinal_features: List of ordinal features to encode.
         ordinal_orders: Dict mapping ordinal features to category orders.
@@ -158,13 +161,13 @@ def encode_categorical_features(
     df_train_encoded = df_train.copy()
     df_test_encoded = df_test.copy()
 
-    categorical_features = (
-        ohe_features + target_encoded_features + ordinal_features
+    all_categorical_features = (
+        binary_features + categorical_features + target_encoded_features + ordinal_features
     )
 
     placeholders = ["xna"]
 
-    for feature in categorical_features:
+    for feature in all_categorical_features:
         if feature in df_train_encoded.columns:
             df_train_encoded[feature] = df_train_encoded[feature].replace(
                 placeholders, np.nan
@@ -174,14 +177,13 @@ def encode_categorical_features(
                 placeholders, np.nan
             )
 
-    ohe_features_exclusive = [
-        feat
-        for feat in ohe_features
-        if feat not in target_encoded_features and feat not in ordinal_features
-    ]
+    le = LabelEncoder()
+    for feature in binary_features:
+        df_train_encoded[feature] = le.fit_transform(df_train_encoded[feature])
+        df_test_encoded[feature] = le.transform(df_test_encoded[feature])
 
     ohe = OneHotEncoder(
-        cols=ohe_features_exclusive, use_cat_names=True, handle_unknown="ignore"
+        cols=categorical_features, use_cat_names=True, handle_unknown="ignore"
     )
 
     if target_column in df_train_encoded.columns:
@@ -229,6 +231,7 @@ def encode_categorical_features(
         df_test[target_encoded_features]
     )
 
+    # Ordinal Encoding for ordinal features
     ordinal_encoder = OrdinalEncoder(
         categories=[ordinal_orders[feat] for feat in ordinal_features],
         handle_unknown="use_encoded_value",
