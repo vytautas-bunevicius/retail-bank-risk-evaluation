@@ -58,28 +58,45 @@ SECONDARY_COLORS = [
 ALL_COLORS = PRIMARY_COLORS + SECONDARY_COLORS
 
 
-def shap_summary_plot(
+def shap_summary_plot_cycled(
     shap_values: np.ndarray,
     feature_names: List[str],
-    save_path: Optional[str] = None,
+    _: Optional[List[str]] = None,
+    save_path: Optional[str] = None
 ) -> None:
-    """Creates a bar plot of SHAP feature importance.
+    """
+    Creates a bar plot of SHAP feature importance with primary colors for quartiles.
 
     Args:
-        shap_values (np.ndarray): The SHAP values for each feature.
-        feature_names (List[str]): The names of the features.
-        save_path (Optional[str]): The file path to save the plot image. Defaults to None.
+        shap_values: A numpy array containing the SHAP values for each feature.
+        feature_names: A list of strings representing the names of the features.
+        color_palette: An optional list of strings representing custom colors for the plot.
+        save_path: An optional string representing the file path to save the plot image.
 
     Returns:
-        None: The function displays the plot and optionally saves it.
+        None. The function displays the plot and optionally saves it to the specified path.
     """
     shap_mean = np.abs(shap_values).mean(axis=0)
-    feature_importance = pd.DataFrame(
-        {"feature": feature_names, "importance": shap_mean}
-    )
-    feature_importance = feature_importance.sort_values(
-        "importance", ascending=True
-    )
+    feature_importance = pd.DataFrame({
+        "feature": feature_names,
+        "importance": shap_mean
+    }).sort_values("importance", ascending=False)
+
+    num_features = len(feature_importance)
+    quartiles = [int(num_features * q) for q in [0.25, 0.5, 0.75]]
+
+    colors = []
+    for i in range(num_features):
+        if i < quartiles[0]:
+            colors.append(PRIMARY_COLORS[0])
+        elif i < quartiles[1]:
+            colors.append(PRIMARY_COLORS[1])
+        elif i < quartiles[2]:
+            colors.append(PRIMARY_COLORS[2])
+        else:
+            colors.append(PRIMARY_COLORS[3])
+
+    color_map = dict(zip(feature_importance['feature'], colors))
 
     fig = px.bar(
         feature_importance,
@@ -87,14 +104,14 @@ def shap_summary_plot(
         y="feature",
         orientation="h",
         title="SHAP Feature Importance",
-        labels={"importance": "mean(|SHAP value|)", "feature": "Feature"},
-        color="importance",
-        color_continuous_scale=PRIMARY_COLORS,
+        labels={"importance": "Mean(|SHAP value|)", "feature": "Feature"},
+        color="feature",
+        color_discrete_map=color_map
     )
 
     fig.update_layout(
-        height=1200,
-        width=1200,
+        height=600 + 20 * len(feature_importance),
+        width=800,
         plot_bgcolor=BACKGROUND_COLOR,
         paper_bgcolor=BACKGROUND_COLOR,
         font={"family": "Styrene A", "size": 12, "color": "#191919"},
@@ -104,10 +121,13 @@ def shap_summary_plot(
             "xanchor": "center",
             "font": {"family": "Styrene B", "size": 20, "color": "#191919"},
         },
+        showlegend=False
     )
 
     if save_path:
         fig.write_image(save_path)
+
+    return fig
 
 
 def shap_force_plot(
@@ -283,7 +303,6 @@ def plot_combined_confusion_matrices(
 
     n_models = len(results)
 
-    # Determine the grid layout
     if n_models <= 2:
         rows, cols = 1, 2
     elif n_models <= 4:
@@ -355,7 +374,7 @@ def plot_combined_confusion_matrices(
             title_standoff=25,
         )
 
-    height = max(400 * rows, 800)  # Ensure minimum height of 800
+    height = max(400 * rows, 800)
     width = 1200
 
     fig.update_layout(
