@@ -63,24 +63,25 @@ def shap_summary_plot_cycled(
     feature_names: List[str],
     _: Optional[List[str]] = None,
     save_path: Optional[str] = None
-) -> None:
+) -> px.bar:
     """
     Creates a bar plot of SHAP feature importance with primary colors for quartiles.
 
     Args:
         shap_values: A numpy array containing the SHAP values for each feature.
         feature_names: A list of strings representing the names of the features.
-        color_palette: An optional list of strings representing custom colors for the plot.
+        color_palette: An optional list of strings representing custom colors for the plot (unused).
         save_path: An optional string representing the file path to save the plot image.
 
     Returns:
-        None. The function displays the plot and optionally saves it to the specified path.
+        px.bar: The plotly bar chart figure object.
     """
     shap_mean = np.abs(shap_values).mean(axis=0)
     feature_importance = pd.DataFrame({
         "feature": feature_names,
         "importance": shap_mean
-    }).sort_values("importance", ascending=False)
+    })
+    feature_importance = feature_importance.sort_values("importance", ascending=True)
 
     num_features = len(feature_importance)
     quartiles = [int(num_features * q) for q in [0.25, 0.5, 0.75]]
@@ -88,15 +89,13 @@ def shap_summary_plot_cycled(
     colors = []
     for i in range(num_features):
         if i < quartiles[0]:
-            colors.append(PRIMARY_COLORS[0])
+            colors.append(PRIMARY_COLORS[3])  # Reversed color order
         elif i < quartiles[1]:
-            colors.append(PRIMARY_COLORS[1])
-        elif i < quartiles[2]:
             colors.append(PRIMARY_COLORS[2])
+        elif i < quartiles[2]:
+            colors.append(PRIMARY_COLORS[1])
         else:
-            colors.append(PRIMARY_COLORS[3])
-
-    color_map = dict(zip(feature_importance['feature'], colors))
+            colors.append(PRIMARY_COLORS[0])
 
     fig = px.bar(
         feature_importance,
@@ -105,9 +104,10 @@ def shap_summary_plot_cycled(
         orientation="h",
         title="SHAP Feature Importance",
         labels={"importance": "Mean(|SHAP value|)", "feature": "Feature"},
-        color="feature",
-        color_discrete_map=color_map
     )
+
+    # Set the marker colors for the entire trace
+    fig.update_traces(marker_color=colors)
 
     fig.update_layout(
         height=600 + 20 * len(feature_importance),
@@ -121,7 +121,8 @@ def shap_summary_plot_cycled(
             "xanchor": "center",
             "font": {"family": "Styrene B", "size": 20, "color": "#191919"},
         },
-        showlegend=False
+        showlegend=False,
+        yaxis={'categoryorder':'total ascending'}
     )
 
     if save_path:
