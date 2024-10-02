@@ -40,6 +40,7 @@ from sklearn.metrics import (
     fbeta_score,
 )
 from sklearn.pipeline import FunctionTransformer, Pipeline
+from focal_loss import BinaryFocalLoss
 
 
 def evaluate_model(
@@ -491,7 +492,7 @@ def get_model_and_params(
             ),
             "random_state": random_state,
             "use_label_encoder": False,
-            "eval_metric": "logloss",
+            "eval_metric": BinaryFocalLoss(gamma=2),
             "n_jobs": n_jobs,
         }
         return xgb.XGBClassifier, params

@@ -546,8 +546,8 @@ def plot_confusion_matrix(
     fig = go.Figure(
         data=go.Heatmap(
             z=cm,
-            x=labels or ["Not Transported", "Transported"],
-            y=labels or ["Not Transported", "Transported"],
+            x=labels or ["No Default", "Default"],
+            y=labels or ["No Default", "Default"],
             hoverongaps=False,
             text=text,
             texttemplate="%{text}",
