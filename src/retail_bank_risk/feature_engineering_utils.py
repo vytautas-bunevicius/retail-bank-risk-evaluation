@@ -61,8 +61,14 @@ def bin_numeric_into_quantiles(
     Returns:
         A Series with binned values.
     """
-    labels = [f"Q{i+1}" for i in range(num_bins)]
-    return pd.qcut(df[column], q=num_bins, labels=labels)
+    if df[column].nunique() == 1:
+        return pd.Series(["Q1"] * len(df), index=df.index)
+
+    labels = [f"Q{i+1}" for i in range(num_bins)]  # f-string with interpolated variables
+
+    return pd.qcut(df[column], q=num_bins, labels=labels, duplicates="drop")
+
+
 
 
 def create_binned_features(df: pd.DataFrame) -> pd.DataFrame:
