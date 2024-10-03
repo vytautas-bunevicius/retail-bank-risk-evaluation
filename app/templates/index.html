@@ -1,443 +1,713 @@
-<!-- app/templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Loan Application</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p6SVJlL1aYqUXuC4o6yKjTwFXoC3cT+kpVJgN0ELMsoN3EFuBLQ+v0CAZj6jaKxE48HVc/FoiS0c0p78iT2g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* Root Variables */
-        :root {
-            --primary-color: #1a73e8;
-            --secondary-color: #34a853;
-            --background-color: #f5f5f5;
-            --card-color: #ffffff;
-            --text-color: #202124;
-            --border-color: #dadce0;
-            --success-color: #34a853;
-            --error-color: #ea4335;
-            --warning-color: #fbbc05;
-            --font-family: 'Roboto', sans-serif;
-            --transition-duration: 0.3s;
-        }
+      :root {
+        --background-color: #eeece2;
+        --card-color: #ffffff;
+        --text-color: #000000;
+        --primary-color: #cc7b5c;
+        --secondary-color: #9c8aa5;
+        --accent-color: #91a694;
+        --border-color: #e5e4df;
+        --progress-color: #91a694;
+        --error-color: #ff6b6b;
+        --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+      }
 
-        /* Global Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--background-color);
-            font-family: var(--font-family);
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        /* Container */
+      body {
+        font-family: var(--font-family);
+        background-color: var(--background-color);
+        color: var(--text-color);
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 480px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: var(--card-color);
+        border-radius: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        color: var(--primary-color);
+      }
+
+      .progress-bar {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+      }
+
+      .progress-bar::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: var(--border-color);
+        z-index: 0;
+      }
+
+      .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        height: 2px;
+        background-color: var(--progress-color);
+        z-index: 1;
+        width: var(--progress, 0%);
+        transition: width 0.3s ease;
+      }
+
+      .progress-step {
+        z-index: 2;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: var(--border-color);
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      .progress-step.active {
+        background-color: var(--progress-color);
+      }
+
+      .progress-step span {
+        color: var(--text-color);
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .form-step {
+        display: none;
+      }
+
+      .form-step.active {
+        display: block;
+        animation: fadeIn 0.5s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+        background-color: var(--background-color);
+      }
+
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+
+      input.error,
+      select.error {
+        border-color: var(--error-color);
+      }
+
+      .error-message {
+        color: var(--error-color);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+        display: none;
+      }
+
+      .btn-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+      }
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      .btn:hover {
+        background-color: var(--secondary-color);
+      }
+
+      .btn:disabled {
+        background-color: var(--border-color);
+        cursor: not-allowed;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background-color: var(--card-color);
+        padding: 2rem;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 400px;
+        position: relative;
+        animation: slideUp 0.3s ease-in-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          transform: translateY(50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-color);
+      }
+
+      .modal h2 {
+        margin-bottom: 1rem;
+        font-size: 1.4rem;
+        text-align: center;
+        color: var(--primary-color);
+      }
+
+      .modal p {
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+
+      .modal ul {
+        list-style-type: none;
+        padding-left: 0;
+      }
+
+      .modal li {
+        margin-bottom: 0.5rem;
+      }
+
+      @media (max-width: 480px) {
         .container {
-            width: 90%;
-            max-width: 500px;
-            background-color: var(--card-color);
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            box-sizing: border-box;
-            position: relative;
+          margin: 1rem;
+          padding: 1.5rem;
         }
 
-        /* Header */
-        .container h1 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
-            font-size: 1.8rem;
-            font-weight: 500;
-        }
-
-        /* Progress Bar */
-        .progress-bar {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2rem;
-            position: relative;
-        }
-
-        .progress-bar::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background-color: var(--border-color);
-            z-index: 0;
-        }
-
-        .progress-step {
-            z-index: 1;
-            text-align: center;
-            flex: 1;
-            position: relative;
-        }
-
-        .progress-step::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background-color: var(--border-color);
-            transition: background-color var(--transition-duration) ease;
-        }
-
-        .progress-step.active::after {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .progress-step-inner i {
-            color: white;
-            font-size: 14px;
-        }
-
-        .progress-step.active .progress-step-inner {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .progress-step-inner {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background-color: var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 0.5rem;
-            position: relative;
-            z-index: 1;
-            transition: background-color var(--transition-duration) ease;
-        }
-
-        .progress-step span {
-            display: block;
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--text-color);
-        }
-
-        /* Form Steps */
-        .form-step {
-            display: none;
-            animation: fadeIn var(--transition-duration) ease-in-out;
-        }
-
-        .form-step.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Form Groups */
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--text-color);
-        }
-
-        input, select {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color var(--transition-duration) ease;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        /* Buttons */
         .btn-group {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1.5rem;
+          flex-direction: column;
         }
 
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            background-color: var(--primary-color);
-            color: white;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color var(--transition-duration) ease;
+        .btn-group .btn {
+          width: 100%;
+          margin-bottom: 0.75rem;
         }
-
-        .btn:hover {
-            background-color: #135abe;
-        }
-
-        .btn:disabled {
-            background-color: #a0c4ff;
-            cursor: not-allowed;
-        }
-
-        /* Result Modal */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1000; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background-color: var(--card-color);
-            padding: 2rem;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 400px;
-            position: relative;
-            animation: slideDown var(--transition-duration) ease-in-out;
-        }
-
-        @keyframes slideDown {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: var(--text-color);
-        }
-
-        .result-approved {
-            color: var(--success-color);
-        }
-
-        .result-rejected {
-            color: var(--error-color);
-        }
-
-        .modal h2 {
-            margin-top: 0;
-            text-align: center;
-            color: var(--text-color);
-        }
-
-        .modal p {
-            margin: 1rem 0;
-            text-align: center;
-        }
-
-        .modal ul {
-            list-style-type: disc;
-            padding-left: 1.5rem;
-            text-align: left;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 600px) {
-            .container {
-                padding: 1.5rem;
-            }
-
-            .btn-group {
-                flex-direction: column;
-            }
-
-            .btn-group .btn {
-                width: 100%;
-                margin-bottom: 0.75rem;
-            }
-
-            .progress-bar::before {
-                top: 60%;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>Loan Application</h1>
-        <div class="progress-bar">
-            <div class="progress-step active">
-                <div class="progress-step-inner"><i class="fas fa-user"></i></div>
-                <span>Personal</span>
-            </div>
-            <div class="progress-step">
-                <div class="progress-step-inner"><i class="fas fa-wallet"></i></div>
-                <span>Financial</span>
-            </div>
-            <div class="progress-step">
-                <div class="progress-step-inner"><i class="fas fa-hand-holding-usd"></i></div>
-                <span>Loan</span>
-            </div>
+      <h1>Loan Application</h1>
+      <div class="progress-bar">
+        <div class="progress-step active" onclick="goToStep(1)">
+          <span>1</span>
         </div>
-        <form id="loanForm">
-            <!-- Step 1: Personal Information -->
-            <div class="form-step active" id="step1">
-                <div class="form-group">
-                    <label for="code_gender">Gender</label>
-                    <select id="code_gender" name="code_gender" required>
-                        <option value="">Select gender</option>
-                        <option value="M">Male</option>
-                        <option value="F">Female</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="days_birth">Age (in years)</label>
-                    <input type="number" id="days_birth" name="days_birth" required min="18" max="100">
-                </div>
-                <div class="form-group">
-                    <label for="name_education_type">Education Level</label>
-                    <select id="name_education_type" name="name_education_type" required>
-                        <option value="">Select education level</option>
-                        <option value="Lower secondary">Lower secondary</option>
-                        <option value="Secondary / secondary special">Secondary / secondary special</option>
-                        <option value="Incomplete higher">Incomplete higher</option>
-                        <option value="Higher education">Higher education</option>
-                        <option value="Academic degree">Academic degree</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="name_family_status">Family Status</label>
-                    <select id="name_family_status" name="name_family_status" required>
-                        <option value="">Select family status</option>
-                        <option value="Single / not married">Single / not married</option>
-                        <option value="Married">Married</option>
-                        <option value="Civil marriage">Civil marriage</option>
-                        <option value="Separated">Separated</option>
-                        <option value="Widow">Widow</option>
-                    </select>
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn" onclick="nextStep(1)">Next</button>
-                </div>
+        <div class="progress-step" onclick="goToStep(2)"><span>2</span></div>
+        <div class="progress-step" onclick="goToStep(3)"><span>3</span></div>
+      </div>
+      <form id="loanForm">
+        <div class="form-step active" id="step1">
+          <div class="form-group">
+            <label for="code_gender">Gender</label>
+            <select id="code_gender" name="code_gender" required>
+              <option value="">Select gender</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+            <div class="error-message">Please select a gender</div>
+          </div>
+          <div class="form-group">
+            <label for="days_birth">Age (in years)</label>
+            <input
+              type="number"
+              id="days_birth"
+              name="days_birth"
+              required
+              min="18"
+              max="100"
+            />
+            <div class="error-message">
+              Please enter a valid age between 18 and 100
             </div>
+          </div>
+          <div class="form-group">
+            <label for="name_education_type">Education Level</label>
+            <select
+              id="name_education_type"
+              name="name_education_type"
+              required
+            >
+              <option value="">Select education level</option>
+              <option value="Lower secondary">Lower secondary</option>
+              <option value="Secondary / secondary special">
+                Secondary / secondary special
+              </option>
+              <option value="Incomplete higher">Incomplete higher</option>
+              <option value="Higher education">Higher education</option>
+              <option value="Academic degree">Academic degree</option>
+            </select>
+            <div class="error-message">Please select an education level</div>
+          </div>
+          <div class="form-group">
+            <label for="name_family_status">Family Status</label>
+            <select id="name_family_status" name="name_family_status" required>
+              <option value="">Select family status</option>
+              <option value="Single / not married">Single / not married</option>
+              <option value="Married">Married</option>
+              <option value="Civil marriage">Civil marriage</option>
+              <option value="Separated">Separated</option>
+              <option value="Widow">Widow</option>
+            </select>
+            <div class="error-message">Please select a family status</div>
+          </div>
+          <div class="btn-group">
+            <button type="button" class="btn" onclick="nextStep(1)">
+              Next
+            </button>
+          </div>
+        </div>
 
-            <!-- Step 2: Financial Information -->
-            <div class="form-step" id="step2">
-                <div class="form-group">
-                    <label for="amt_income_total">Total Annual Income ($)</label>
-                    <input type="number" id="amt_income_total" name="amt_income_total" required min="0" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label for="name_income_type">Income Type</label>
-                    <select id="name_income_type" name="name_income_type" required>
-                        <option value="">Select income type</option>
-                        <option value="Working">Working</option>
-                        <option value="Commercial associate">Commercial associate</option>
-                        <option value="Pensioner">Pensioner</option>
-                        <option value="State servant">State servant</option>
-                        <option value="Student">Student</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="name_housing_type">Housing Type</label>
-                    <select id="name_housing_type" name="name_housing_type" required>
-                        <option value="">Select housing type</option>
-                        <option value="House / apartment">House / apartment</option>
-                        <option value="With parents">With parents</option>
-                        <option value="Municipal apartment">Municipal apartment</option>
-                        <option value="Rented apartment">Rented apartment</option>
-                        <option value="Office apartment">Office apartment</option>
-                        <option value="Co-op apartment">Co-op apartment</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="flag_own_car">Do you own a car?</label>
-                    <select id="flag_own_car" name="flag_own_car" required>
-                        <option value="">Select option</option>
-                        <option value="Y">Yes</option>
-                        <option value="N">No</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="flag_own_realty">Do you own real estate?</label>
-                    <select id="flag_own_realty" name="flag_own_realty" required>
-                        <option value="">Select option</option>
-                        <option value="Y">Yes</option>
-                        <option value="N">No</option>
-                    </select>
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn" onclick="prevStep(2)">Previous</button>
-                    <button type="button" class="btn" onclick="nextStep(2)">Next</button>
-                </div>
-            </div>
+        <div class="form-step" id="step2">
+          <div class="form-group">
+            <label for="amt_income_total">Total Monthly Income ($)</label>
+            <input
+              type="number"
+              id="amt_income_total"
+              name="amt_income_total"
+              required
+              min="0"
+              step="0.01"
+            />
+            <div class="error-message">Please enter a valid income amount</div>
+          </div>
+          <div class="form-group">
+            <label for="name_income_type">Income Type</label>
+            <select id="name_income_type" name="name_income_type" required>
+              <option value="">Select income type</option>
+              <option value="Working">Working</option>
+              <option value="Commercial associate">Commercial associate</option>
+              <option value="Pensioner">Pensioner</option>
+              <option value="State servant">State servant</option>
+              <option value="Student">Student</option>
+            </select>
+            <div class="error-message">Please select an income type</div>
+          </div>
+          <div class="form-group">
+            <label for="name_housing_type">Housing Type</label>
+            <select id="name_housing_type" name="name_housing_type" required>
+              <option value="">Select housing type</option>
+              <option value="House / apartment">House / apartment</option>
+              <option value="With parents">With parents</option>
+              <option value="Municipal apartment">Municipal apartment</option>
+              <option value="Rented apartment">Rented apartment</option>
+              <option value="Office apartment">Office apartment</option>
+              <option value="Co-op apartment">Co-op apartment</option>
+            </select>
+            <div class="error-message">Please select a housing type</div>
+          </div>
+          <div class="form-group">
+            <label for="flag_own_car">Do you own a car?</label>
+            <select id="flag_own_car" name="flag_own_car" required>
+              <option value="">Select option</option>
+              <option value="Y">Yes</option>
+              <option value="N">No</option>
+            </select>
+            <div class="error-message">Please select an option</div>
+          </div>
+          <div class="form-group">
+            <label for="flag_own_realty">Do you own real estate?</label>
+            <select id="flag_own_realty" name="flag_own_realty" required>
+              <option value="">Select option</option>
+              <option value="Y">Yes</option>
+              <option value="N">No</option>
+            </select>
+            <div class="error-message">Please select an option</div>
+          </div>
+          <div class="btn-group">
+            <button type="button" class="btn" onclick="prevStep(2)">
+              Previous
+            </button>
+            <button type="button" class="btn" onclick="nextStep(2)">
+              Next
+            </button>
+          </div>
+        </div>
 
-            <!-- Step 3: Loan Information -->
-            <div class="form-step" id="step3">
-                <div class="form-group">
-                    <label for="amt_credit">Credit Amount ($)</label>
-                    <input type="number" id="amt_credit" name="amt_credit" required min="0" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label for="loan_term_years">Loan Term (Years)</label>
-                    <input type="number" id="loan_term_years" name="loan_term_years" required min="1" max="30">
-                </div>
-                <div class="form-group">
-                    <label for="buy_goods">Are you purchasing goods?</label>
-                    <select id="buy_goods" name="buy_goods" required onchange="toggleGoodsPrice()">
-                        <option value="">Select option</option>
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                    </select>
-                </div>
-                <div class="form-group" id="goodsPriceGroup" style="display: none;">
-                    <label for="amt_goods_price">Goods Price ($)</label>
-                    <input type="number" id="amt_goods_price" name="amt_goods_price" min="0" step="0.01" value="0">
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn" onclick="prevStep(3)">Previous</button>
-                    <button type="button" class="btn" onclick="submitApplication()">Submit Application</button>
-                </div>
+        <div class="form-step" id="step3">
+          <div class="form-group">
+            <label for="amt_credit">Credit Amount ($)</label>
+            <input
+              type="number"
+              id="amt_credit"
+              name="amt_credit"
+              required
+              min="0"
+              step="0.01"
+            />
+            <div class="error-message">Please enter a valid credit amount</div>
+          </div>
+          <div class="form-group">
+            <label for="loan_term_years">Loan Term (Years)</label>
+            <input
+              type="number"
+              id="loan_term_years"
+              name="loan_term_years"
+              required
+              min="1"
+              max="30"
+            />
+            <div class="error-message">
+              Please enter a valid loan term between 1 and 30 years
             </div>
-        </form>
+          </div>
+          <div class="form-group">
+            <label for="buy_goods">Are you purchasing goods?</label>
+            <select
+              id="buy_goods"
+              name="buy_goods"
+              required
+              onchange="toggleGoodsPrice()"
+            >
+              <option value="">Select option</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+            <div class="error-message">Please select an option</div>
+          </div>
+          <div class="form-group" id="goodsPriceGroup" style="display: none">
+            <label for="amt_goods_price">Goods Price ($)</label>
+            <input
+              type="number"
+              id="amt_goods_price"
+              name="amt_goods_price"
+              min="0"
+              step="0.01"
+              value="0"
+            />
+            <div class="error-message">Please enter a valid goods price</div>
+          </div>
+          <div class="btn-group">
+            <button type="button" class="btn" onclick="prevStep(3)">
+              Previous
+            </button>
+            <button type="button" class="btn" onclick="submitApplication()">
+              Submit Application
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
 
-    <!-- Result Modal -->
     <div id="resultModal" class="modal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeModal()">&times;</button>
-            <h2 id="modalTitle"></h2>
-            <p id="modalMessage"></p>
-            <div id="modalDetails"></div>
-        </div>
+      <div class="modal-content">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <h2 id="modalTitle"></h2>
+        <p id="modalMessage"></p>
+        <div id="modalDetails"></div>
+      </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="/static/script.js"></script>
-</body>
+    <script>
+      const form = document.getElementById('loanForm');
+      const resultModal = document.getElementById('resultModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalMessage = document.getElementById('modalMessage');
+      const modalDetails = document.getElementById('modalDetails');
+      const steps = document.querySelectorAll('.form-step');
+      const progressSteps = document.querySelectorAll('.progress-step');
+      const progressBar = document.querySelector('.progress-bar');
+
+      function nextStep(currentStep) {
+        if (validateStep(currentStep)) {
+          goToStep(currentStep + 1);
+        }
+      }
+
+      function prevStep(currentStep) {
+        if (currentStep > 1) {
+          goToStep(currentStep - 1);
+        }
+      }
+
+      function goToStep(stepNumber) {
+        if (stepNumber > 1 && !validateStep(stepNumber - 1)) {
+          return;
+        }
+        steps.forEach((step, index) => {
+          step.classList.remove('active');
+          progressSteps[index].classList.remove('active');
+        });
+        steps[stepNumber - 1].classList.add('active');
+        for (let i = 0; i < stepNumber; i++) {
+          progressSteps[i].classList.add('active');
+        }
+        updateProgressBar(stepNumber - 1);
+      }
+
+      function updateProgressBar(currentStep) {
+        const progress = (currentStep / (steps.length - 1)) * 100;
+        progressBar.style.setProperty('--progress', `${progress}%`);
+      }
+
+      function validateStep(stepNumber) {
+        const currentStep = steps[stepNumber - 1];
+        const fields = currentStep.querySelectorAll('input, select');
+        let isValid = true;
+
+        fields.forEach((field) => {
+          if (field.required && !field.value) {
+            isValid = false;
+            showError(field, 'This field is required');
+          } else if (field.id === 'days_birth') {
+            const age = parseInt(field.value);
+            if (isNaN(age) || age < 18 || age > 100) {
+              isValid = false;
+              showError(field, 'Please enter a valid age between 18 and 100');
+            } else {
+              hideError(field);
+            }
+          } else if (field.type === 'number' && field.value !== '') {
+            const value = parseFloat(field.value);
+            if (isNaN(value) || value < 0) {
+              isValid = false;
+              showError(field, 'Please enter a valid positive number');
+            } else {
+              hideError(field);
+            }
+          } else {
+            hideError(field);
+          }
+        });
+
+        return isValid;
+      }
+
+      function showError(field, message) {
+        field.classList.add('error');
+        const errorElement = field.nextElementSibling;
+        if (errorElement && errorElement.classList.contains('error-message')) {
+          errorElement.textContent = message;
+          errorElement.style.display = 'block';
+        }
+      }
+
+      function hideError(field) {
+        field.classList.remove('error');
+        const errorElement = field.nextElementSibling;
+        if (errorElement && errorElement.classList.contains('error-message')) {
+          errorElement.style.display = 'none';
+        }
+      }
+
+      function toggleGoodsPrice() {
+        const buyGoods = document.getElementById('buy_goods').value;
+        const goodsPriceGroup = document.getElementById('goodsPriceGroup');
+        goodsPriceGroup.style.display = buyGoods === 'true' ? 'block' : 'none';
+        document.getElementById('amt_goods_price').required =
+          buyGoods === 'true';
+        if (buyGoods !== 'true') {
+          document.getElementById('amt_goods_price').value = 0;
+        }
+      }
+
+      function submitApplication() {
+        if (validateForm()) {
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData.entries());
+
+          data.buy_goods = data.buy_goods === 'true';
+          const ageYears = parseInt(data.days_birth, 10);
+          data.days_birth = -Math.abs(ageYears * 365);
+
+          // Convert monetary fields to floats
+          const monetaryFields = [
+            'amt_income_total',
+            'amt_credit',
+            'amt_goods_price',
+          ];
+          monetaryFields.forEach((field) => {
+            data[field] = parseFloat(data[field]);
+          });
+
+          // Convert loan_term_years to integer
+          data.loan_term_years = parseInt(data.loan_term_years, 10);
+
+          // Show loading modal
+          showLoadingModal();
+
+          $.ajax({
+            url: '/predict',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (response) {
+              displayResult(response);
+            },
+            error: function (xhr, status, error) {
+              console.error('Error:', error);
+              let errorMsg = 'An error occurred.';
+              if (xhr.responseJSON && xhr.responseJSON.detail) {
+                errorMsg = xhr.responseJSON.detail
+                  .map((err) => err.msg)
+                  .join(' ');
+              }
+              showErrorModal(errorMsg);
+            },
+          });
+        }
+      }
+
+      function validateForm() {
+        let isValid = true;
+        for (let i = 1; i <= steps.length; i++) {
+          if (!validateStep(i)) {
+            isValid = false;
+            goToStep(i);
+            break;
+          }
+        }
+        return isValid;
+      }
+
+      function displayResult(prediction) {
+        hideModal();
+
+        let title = '';
+        let message = '';
+        let details = '';
+
+        if (prediction.loan_approval === 'Approved') {
+          title = '🎉 Loan Approved';
+          message = `Congratulations! Your loan application has been approved.`;
+          details = `
+                    <p><strong>Monthly Payment:</strong> $${prediction.monthly_payment.toLocaleString()}</p>
+                `;
+        } else {
+          title = 'Loan Application Result';
+          message = `Unfortunately, we cannot provide you the loan at this time.`;
+          details = '';
+        }
+
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modalDetails.innerHTML = details;
+
+        resultModal.style.display = 'flex';
+      }
+
+      function showErrorModal(message) {
+        hideModal();
+
+        modalTitle.textContent = 'Error';
+        modalMessage.textContent = message;
+        modalDetails.innerHTML = '';
+
+        resultModal.style.display = 'flex';
+      }
+
+      function showLoadingModal() {
+        modalTitle.textContent = 'Processing';
+        modalMessage.textContent =
+          'Please wait while we process your application.';
+        modalDetails.innerHTML = '';
+
+        resultModal.style.display = 'flex';
+      }
+
+      function hideModal() {
+        resultModal.style.display = 'none';
+      }
+
+      function closeModal() {
+        resultModal.style.display = 'none';
+      }
+
+      window.onclick = function (event) {
+        if (event.target == resultModal) {
+          resultModal.style.display = 'none';
+        }
+      };
+
+      updateProgressBar(0);
+    </script>
+  </body>
 </html>

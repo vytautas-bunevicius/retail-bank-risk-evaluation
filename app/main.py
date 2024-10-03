@@ -93,7 +93,7 @@ class EducationType(str, Enum):
 class PredictionInput(BaseModel):
     """Schema for input data for prediction."""
 
-    amt_income_total: float = Field(..., description="Total income amount", ge=0.0)
+    amt_income_total: float = Field(..., description="Total monthly income amount", ge=0.0)
     amt_credit: float = Field(..., description="Credit amount", gt=0.0)
     amt_goods_price: float = Field(..., description="Goods price", ge=0.0)
     name_income_type: IncomeType = Field(..., description="Income type")
@@ -146,7 +146,6 @@ class PredictionResponse(BaseModel):
     loan_approval: str
     anomalies_detected: bool
     anomalies_details: Optional[List[AnomalyRecord]] = []
-    rejection_reason: Optional[str] = None
 
 def preprocess_input(data: Dict[str, Any]) -> Tuple[pd.DataFrame, bool, List[Dict[str, Any]]]:
     """
@@ -328,11 +327,11 @@ def adjust_default_probability(original_prob: float, debt_to_income_ratio: float
 
 def loan_to_income_check(monthly_payment: float, amt_income_total: float, max_ratio: float = 0.4) -> bool:
     """
-    Check if the monthly payment exceeds the maximum allowable ratio of income.
+    Check if the monthly payment exceeds the maximum allowable ratio of monthly income.
 
     Parameters:
     - monthly_payment: The calculated monthly payment
-    - amt_income_total: The total income of the applicant
+    - amt_income_total: The total monthly income of the applicant
     - max_ratio: The maximum allowable ratio (default 0.4 for 40%)
 
     Returns:
@@ -341,7 +340,7 @@ def loan_to_income_check(monthly_payment: float, amt_income_total: float, max_ra
     if amt_income_total == 0:
         return False
     ratio = monthly_payment / amt_income_total
-    logger.info(f"Monthly payment to income ratio: {ratio:.2f}")
+    logger.info(f"Monthly payment to monthly income ratio: {ratio:.2f}")
     return ratio <= max_ratio
 
 @app.get("/", response_class=HTMLResponse)
@@ -367,7 +366,7 @@ async def predict(request: Request) -> PredictionResponse:
 
     Returns:
     - JSON response with prediction details including probability of default, monthly payment,
-      risk level, loan approval status, anomaly detection information, and rejection reason if applicable
+      risk level, loan approval status, and anomaly detection information
     """
     logger.info("Received prediction request")
     try:
@@ -397,20 +396,18 @@ async def predict(request: Request) -> PredictionResponse:
         monthly_payment = calculate_monthly_payment(loan_amount, loan_term_years)
         logger.info(f"Calculated monthly payment: {monthly_payment:.2f}")
 
-        debt_to_income_ratio = float(processed_data['debt_to_income_ratio'].iloc[0])
+        debt_to_income_ratio = monthly_payment / input_data.amt_income_total
         adjusted_prediction = adjust_default_probability(original_prediction, debt_to_income_ratio)
         logger.info(f"Adjusted probability of default: {adjusted_prediction:.4f}")
 
         max_monthly_payment = 0.4 * input_data.amt_income_total
         logger.info(f"Maximum allowable monthly payment based on income: {max_monthly_payment:.2f}")
 
-        rejection_reason = None
         if not loan_to_income_check(monthly_payment, input_data.amt_income_total):
             risk_level = "High"
             loan_approval = "Rejected"
-            rejection_reason = "Monthly payment exceeds 40% of income."
             adjusted_prediction = 1.0  # Maximum risk due to 40% rule
-            logger.warning("Loan rejected due to monthly payment exceeding 40% of income.")
+            logger.warning("Loan rejected due to monthly payment exceeding 40% of monthly income.")
         else:
             if adjusted_prediction < 0.3:
                 risk_level = "Low"
@@ -420,8 +417,6 @@ async def predict(request: Request) -> PredictionResponse:
                 risk_level = "High"
 
             loan_approval = "Approved" if risk_level in ["Low", "Medium"] else "Rejected"
-            if loan_approval == "Rejected" and not rejection_reason:
-                rejection_reason = "Risk level classified as High."
 
         logger.info(f"Risk Level: {risk_level if loan_approval != 'Rejected' else 'N/A'}")
         logger.info(f"Loan Approval: {loan_approval}")
@@ -437,8 +432,7 @@ async def predict(request: Request) -> PredictionResponse:
             risk_level=risk_level if loan_approval != "Rejected" else None,
             loan_approval=loan_approval,
             anomalies_detected=has_anomalies,
-            anomalies_details=anomalies_details,
-            rejection_reason=rejection_reason
+            anomalies_details=anomalies_details
         )
 
         return response_data
