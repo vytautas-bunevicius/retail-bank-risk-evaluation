@@ -87,12 +87,11 @@ def create_binned_features(df: pd.DataFrame) -> pd.DataFrame:
     df["credit_amount_group"] = bin_numeric_into_quantiles(df, "amt_credit")
     return df
 
-
 def calculate_ratio(
     df: pd.DataFrame,
     numerator: str,
     denominator: str,
-    fill_value: float = 0.0,
+    fill_value: float = 1e6,
 ) -> pd.Series:
     """
     Calculate the ratio between two columns, handling division by zero.
@@ -101,7 +100,7 @@ def calculate_ratio(
         df: The input DataFrame.
         numerator: The name of the column to use as numerator.
         denominator: The name of the column to use as denominator.
-        fill_value: The value to use when denominator is zero. Defaults to 0.0.
+        fill_value: The value to use when denominator is zero. Defaults to 1e6.
 
     Returns:
         A Series with the calculated ratios.
@@ -122,6 +121,9 @@ def create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
         The DataFrame with additional derived features.
     """
     df = df.copy()
+
+    df["zero_income_flag"] = (df["amt_income_total"] == 0).astype(int)
+
     df["debt_to_income_ratio"] = calculate_ratio(
         df, "amt_credit", "amt_income_total"
     )
@@ -131,11 +133,13 @@ def create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     df["annuity_to_income_ratio"] = calculate_ratio(
         df, "amt_annuity", "amt_income_total"
     )
-    df["ext_source_mean"] = df[["ext_source_2", "ext_source_3"]].mean(axis=1)
-    df["credit_exceeds_goods"] = (
-        df["amt_credit"] > df["amt_goods_price"]
-    ).astype(int)
+
+    # Optional future features
+    # df["ext_source_mean"] = df[["ext_source_2", "ext_source_3"]].mean(axis=1)
+    df["credit_exceeds_goods"] = (df["amt_credit"] > df["amt_goods_price"]).astype(int)
+
     return df
+
 
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:

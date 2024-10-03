@@ -1,143 +1,289 @@
+<!-- app/templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loan Application</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p6SVJlL1aYqUXuC4o6yKjTwFXoC3cT+kpVJgN0ELMsoN3EFuBLQ+v0CAZj6jaKxE48HVc/FoiS0c0p78iT2g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* Your existing CSS styles */
+        /* Root Variables */
         :root {
-            --primary: #0666eb;
-            --background: #f5f5f5;
-            --card-background: #ffffff;
-            --text: #333333;
-            --border: #e0e0e0;
+            --primary-color: #1a73e8;
+            --secondary-color: #34a853;
+            --background-color: #f5f5f5;
+            --card-color: #ffffff;
+            --text-color: #202124;
+            --border-color: #dadce0;
+            --success-color: #34a853;
+            --error-color: #ea4335;
+            --warning-color: #fbbc05;
+            --font-family: 'Roboto', sans-serif;
+            --transition-duration: 0.3s;
         }
+
+        /* Global Styles */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-            line-height: 1.5;
             margin: 0;
             padding: 0;
+            background-color: var(--background-color);
+            font-family: var(--font-family);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
+
+        /* Container */
         .container {
-            max-width: 480px;
-            margin: 2rem auto;
+            width: 90%;
+            max-width: 500px;
+            background-color: var(--card-color);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             padding: 2rem;
-            background-color: var(--card-background);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            position: relative;
         }
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
+
+        /* Header */
+        .container h1 {
             text-align: center;
-        }
-        .form-step {
-            display: none;
-        }
-        .form-step.active {
-            display: block;
-        }
-        .form-group {
+            color: var(--primary-color);
             margin-bottom: 1.5rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
             font-weight: 500;
         }
-        input, select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-        .btn {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .btn:hover {
-            background-color: #0550b8;
-        }
-        .btn-group {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 1.5rem;
-        }
+
+        /* Progress Bar */
         .progress-bar {
             display: flex;
             justify-content: space-between;
             margin-bottom: 2rem;
-        }
-        .progress-step {
-            flex: 1;
-            text-align: center;
             position: relative;
         }
-        .progress-step::before {
+
+        .progress-bar::before {
             content: '';
             position: absolute;
             top: 50%;
-            left: -50%;
-            right: 50%;
+            left: 0;
+            right: 0;
             height: 2px;
-            background-color: var(--border);
+            background-color: var(--border-color);
             z-index: 0;
         }
-        .progress-step:first-child::before {
-            display: none;
+
+        .progress-step {
+            z-index: 1;
+            text-align: center;
+            flex: 1;
+            position: relative;
         }
+
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--border-color);
+            transition: background-color var(--transition-duration) ease;
+        }
+
+        .progress-step.active::after {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .progress-step-inner i {
+            color: white;
+            font-size: 14px;
+        }
+
+        .progress-step.active .progress-step-inner {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
         .progress-step-inner {
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background-color: var(--border);
+            background-color: var(--border-color);
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 0.5rem;
             position: relative;
             z-index: 1;
+            transition: background-color var(--transition-duration) ease;
         }
-        .progress-step.active .progress-step-inner {
-            background-color: var(--primary);
-            color: white;
+
+        .progress-step span {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-color);
         }
-        #result {
-            margin-top: 2rem;
-            padding: 1rem;
+
+        /* Form Steps */
+        .form-step {
+            display: none;
+            animation: fadeIn var(--transition-duration) ease-in-out;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Groups */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color var(--transition-duration) ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color var(--transition-duration) ease;
+        }
+
+        .btn:hover {
+            background-color: #135abe;
+        }
+
+        .btn:disabled {
+            background-color: #a0c4ff;
+            cursor: not-allowed;
+        }
+
+        /* Result Modal */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--card-color);
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            animation: slideDown var(--transition-duration) ease-in-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .result-approved {
+            color: var(--success-color);
+        }
+
+        .result-rejected {
+            color: var(--error-color);
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .modal p {
+            margin: 1rem 0;
             text-align: center;
         }
-        .result-low {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
+
+        .modal ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            text-align: left;
         }
-        .result-medium {
-            background-color: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
-        }
-        .result-high {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn-group .btn {
+                width: 100%;
+                margin-bottom: 0.75rem;
+            }
+
+            .progress-bar::before {
+                top: 60%;
+            }
         }
     </style>
 </head>
@@ -146,19 +292,20 @@
         <h1>Loan Application</h1>
         <div class="progress-bar">
             <div class="progress-step active">
-                <div class="progress-step-inner">1</div>
-                Personal
+                <div class="progress-step-inner"><i class="fas fa-user"></i></div>
+                <span>Personal</span>
             </div>
             <div class="progress-step">
-                <div class="progress-step-inner">2</div>
-                Financial
+                <div class="progress-step-inner"><i class="fas fa-wallet"></i></div>
+                <span>Financial</span>
             </div>
             <div class="progress-step">
-                <div class="progress-step-inner">3</div>
-                Loan
+                <div class="progress-step-inner"><i class="fas fa-hand-holding-usd"></i></div>
+                <span>Loan</span>
             </div>
         </div>
         <form id="loanForm">
+            <!-- Step 1: Personal Information -->
             <div class="form-step active" id="step1">
                 <div class="form-group">
                     <label for="code_gender">Gender</label>
@@ -198,9 +345,11 @@
                     <button type="button" class="btn" onclick="nextStep(1)">Next</button>
                 </div>
             </div>
+
+            <!-- Step 2: Financial Information -->
             <div class="form-step" id="step2">
                 <div class="form-group">
-                    <label for="amt_income_total">Total Income</label>
+                    <label for="amt_income_total">Total Annual Income ($)</label>
                     <input type="number" id="amt_income_total" name="amt_income_total" required min="0" step="0.01">
                 </div>
                 <div class="form-group">
@@ -247,101 +396,48 @@
                     <button type="button" class="btn" onclick="nextStep(2)">Next</button>
                 </div>
             </div>
+
+            <!-- Step 3: Loan Information -->
             <div class="form-step" id="step3">
                 <div class="form-group">
-                    <label for="amt_credit">Credit Amount</label>
+                    <label for="amt_credit">Credit Amount ($)</label>
                     <input type="number" id="amt_credit" name="amt_credit" required min="0" step="0.01">
                 </div>
                 <div class="form-group">
-                    <label for="amt_annuity">Annuity Amount</label>
-                    <input type="number" id="amt_annuity" name="amt_annuity" required min="0" step="0.01">
+                    <label for="loan_term_years">Loan Term (Years)</label>
+                    <input type="number" id="loan_term_years" name="loan_term_years" required min="1" max="30">
                 </div>
                 <div class="form-group">
-                    <label for="amt_goods_price">Goods Price</label>
-                    <input type="number" id="amt_goods_price" name="amt_goods_price" required min="0" step="0.01">
+                    <label for="buy_goods">Are you purchasing goods?</label>
+                    <select id="buy_goods" name="buy_goods" required onchange="toggleGoodsPrice()">
+                        <option value="">Select option</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="form-group" id="goodsPriceGroup" style="display: none;">
+                    <label for="amt_goods_price">Goods Price ($)</label>
+                    <input type="number" id="amt_goods_price" name="amt_goods_price" min="0" step="0.01" value="0">
                 </div>
                 <div class="btn-group">
                     <button type="button" class="btn" onclick="prevStep(3)">Previous</button>
-                    <button type="submit" class="btn">Submit Application</button>
+                    <button type="button" class="btn" onclick="submitApplication()">Submit Application</button>
                 </div>
             </div>
         </form>
-        <div id="result"></div>
     </div>
-    <script>
-        const form = document.getElementById('loanForm');
-        const result = document.getElementById('result');
-        const steps = document.querySelectorAll('.form-step');
-        const progressSteps = document.querySelectorAll('.progress-step');
 
-        function nextStep(currentStep) {
-            steps[currentStep - 1].classList.remove('active');
-            steps[currentStep].classList.add('active');
-            progressSteps[currentStep].classList.add('active');
-        }
+    <!-- Result Modal -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <h2 id="modalTitle"></h2>
+            <p id="modalMessage"></p>
+            <div id="modalDetails"></div>
+        </div>
+    </div>
 
-        function prevStep(currentStep) {
-            steps[currentStep - 1].classList.remove('active');
-            steps[currentStep - 2].classList.add('active');
-            progressSteps[currentStep - 1].classList.remove('active');
-        }
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            data.days_birth = -Math.abs(data.days_birth * 365); // Convert years to negative days
-
-            // Convert numeric fields to appropriate types
-            data.amt_income_total = parseFloat(data.amt_income_total);
-            data.amt_credit = parseFloat(data.amt_credit);
-            data.amt_annuity = parseFloat(data.amt_annuity);
-            data.amt_goods_price = parseFloat(data.amt_goods_price);
-            data.days_birth = parseInt(data.days_birth);
-
-            try {
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'An error occurred.');
-                }
-
-                const prediction = await response.json();
-                displayResult(prediction.probability_of_default);
-            } catch (error) {
-                console.error('Error:', error);
-                result.textContent = `Error: ${error.message}`;
-                result.className = '';
-            }
-        });
-
-        function displayResult(probability) {
-            const percentage = (probability * 100).toFixed(2);
-            let riskLevel, cssClass;
-            if (probability < 0.3) {
-                riskLevel = 'Low';
-                cssClass = 'result-low';
-            } else if (probability < 0.6) {
-                riskLevel = 'Medium';
-                cssClass = 'result-medium';
-            } else {
-                riskLevel = 'High';
-                cssClass = 'result-high';
-            }
-            result.innerHTML = `
-                <h2>Loan Application Result</h2>
-                <p>Probability of Default: ${percentage}%</p>
-                <p>Risk Level: ${riskLevel}</p>
-            `;
-            result.className = cssClass;
-        }
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
