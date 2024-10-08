@@ -1,121 +1,192 @@
-# Revolut-style Loan Application Form
+# Credit Risk Prediction Model
 
-## Overview
+## Table of Contents
+1. [Project Overview](#project-overview)
+2. [Live Application](#live-application)
+3. [Dataset Description](#dataset-description)
+4. [Approach](#approach)
+   - [Initial Model Development](#initial-model-development)
+   - [Manual Fine-Tuning](#manual-fine-tuning)
+5. [Results](#results)
+6. [Key Findings](#key-findings)
+7. [Feature Importance](#feature-importance)
+8. [Installation Guide](#installation-guide)
+   - [Prerequisites](#prerequisites)
+   - [Steps](#steps)
+9. [Deployment](#deployment)
+10. [API Endpoints](#api-endpoints)
+11. [User Interface](#user-interface)
+12. [Future Improvements](#future-improvements)
 
-This project implements a modern, user-friendly loan application form inspired by Revolut's design aesthetic. It features a multi-step form with real-time validation, progress tracking, and a sleek UI. The form is designed to collect necessary information from loan applicants and submit it to a backend service for processing.
+## Project Overview
+This project focuses on developing, deploying, and serving a machine learning model for credit risk prediction using the Home Credit dataset. The goal is to create an interpretable, deployable, and financially sound model that effectively identifies potential loan defaulters while maintaining a balance between precision and recall.
 
-## Features
+## Live Application
+The application is deployed and accessible at:
+https://retail-bank-risk-app-562777194669.us-central1.run.app/
 
-- Multi-step form with progress tracking
-- Real-time form validation
-- Field highlighting for required and invalid inputs
-- Clickable progress bubbles for navigation
-- Responsive design for various screen sizes
-- AJAX submission to backend service
-- Modal display for application results
+## Dataset Description
+The Home Credit dataset contains information about loan applications, including:
+- Applicant demographics
+- Financial history
+- Loan specifics
+- External data sources
 
-## Technologies Used
+The main data tables used are:
+- application_train.csv
+- application_test.csv
 
-- HTML5
-- CSS3
-- JavaScript (ES6+)
-- jQuery (for AJAX requests)
+## Approach
 
-## File Structure
+### Initial Model Development
+1. **Data Preprocessing**:
+   - Loaded and cleaned raw data
+   - Performed memory optimization
+   - Handled missing values and outliers
+   - Created derived features
 
-```
-loan-application/
-│
-├── index.html
-├── styles.css
-├── script.js
-└── README.md
-```
+2. **Feature Engineering**:
+   - Binned continuous variables (age, income, credit amount)
+   - Created financial ratios (debt-to-income, credit-to-goods, annuity-to-income)
+   - Engineered time-based features
 
-## Setup and Installation
+3. **Model Development**:
+   - Used XGBoost algorithm
+   - Optimized hyperparameters using Optuna (200 trials)
+   - Selected 40 key features for interpretability and relevance
 
+4. **Evaluation Metrics**:
+   - Focused on recall and F2-score
+   - Analyzed precision-recall trade-offs
+
+### Manual Fine-Tuning
+5. **Enhanced Financial Analysis**:
+   - Incorporated existing mortgage and loan payments
+   - Implemented a comprehensive debt-to-income ratio calculation
+   - Set a 40% threshold for total debt-to-income ratio
+
+6. **Improved Risk Assessment**:
+   - Adjusted default probability based on debt-to-income ratio
+   - Implemented a more nuanced risk level determination
+
+7. **Realistic Financial Assumptions**:
+   - Used a 5% annual interest rate for loan calculations
+   - Improved monthly payment calculations
+
+8. **Expanded Anomaly Detection**:
+   - Set specific bounds for key financial variables
+   - Flagged and reported anomalies in model output
+
+9. **Enhanced Error Handling and Logging**:
+   - Improved input validation and error messaging
+   - Added detailed logging of financial ratios and decision points
+
+## Results
+- Kaggle Competition Score: 67%
+- Test Set Performance:
+  - Recall: 74.42%
+  - Precision: 11.23%
+  - F1-Score: 19.52%
+  - F2-Score: 35.02%
+  - AUC-ROC: 0.6754
+
+While these metrics indicate that the final model may not be the best in terms of raw performance, it's important to note that our manual fine-tuning process has significantly improved the model's effectiveness on edge cases. The incorporation of domain knowledge and financial best practices allows the model to make more nuanced and accurate decisions in complex scenarios that may not be well-represented in the general test set.
+
+## Key Findings
+1. The model demonstrates high recall (74.42%) for detecting defaults, crucial in credit risk management.
+2. This high recall comes at the cost of low precision (11.23%), indicating a tendency to overpredict defaults.
+3. The model errs on the side of caution, which may be acceptable if the cost of missing a default significantly outweighs the cost of false alarms.
+4. The precision-recall curve suggests the model performs moderately well but is dealing with imbalanced data.
+5. Manual fine-tuning improved the model's alignment with real-world financial decision-making processes, particularly for edge cases and complex scenarios.
+
+## Feature Importance
+Top features influencing the model's predictions include:
+1. External source scores
+2. Age
+3. Income-related features
+4. Loan amount and goods price
+5. Various derived financial ratios
+
+## Installation Guide
+
+### Prerequisites
+- Python 3.8+
+- pip
+- virtualenv (optional but recommended)
+
+### Steps
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/loan-application.git
+   git clone https://github.com/vytautas-bunevicius/retail-bank-risk-evaluation.git
+   cd retail-bank-risk-evaluation
    ```
 
-2. Navigate to the project directory:
+2. (Optional) Create and activate a virtual environment:
    ```
-   cd loan-application
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
    ```
 
-3. Open `index.html` in a web browser to view the form.
+3. Install the required dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
 
-## Usage
+4. Set up environment variables:
+   - Create a `.env` file in the root directory
+   - Add necessary environment variables (e.g., `MODEL_PATH`, `DEBUG_MODE`)
 
-The loan application form consists of three steps:
+5. Run the application:
+   ```
+   python main.py
+   ```
 
-1. Personal Information
-2. Financial Information
-3. Loan Details
+The application should now be running on `http://localhost:8080`.
 
-Users must complete all required fields in each step before proceeding to the next. The progress bar at the top of the form indicates the current step and overall progress.
+## Deployment
 
-### Form Validation
+The application is deployed on Google Cloud Platform using Cloud Run. To deploy your own instance:
 
-- Real-time validation is performed as users fill out the form
-- Error messages appear below invalid fields
-- Users cannot proceed to the next step or submit the form until all required fields are correctly filled
+1. Install and set up the Google Cloud SDK
+2. Authenticate with Google Cloud:
+   ```
+   gcloud auth login
+   ```
+3. Set your project ID:
+   ```
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+4. Build and deploy the application using Cloud Build:
+   ```
+   gcloud builds submit --config cloudbuild.yaml .
+   ```
 
-### Submission
+This command uses the `cloudbuild.yaml` configuration file to build and deploy the application, ensuring consistency and reproducibility in the deployment process.
 
-Upon completing all steps and clicking the "Submit Application" button, the form data is sent to the backend service (`/predict` endpoint) for processing. The result is displayed in a modal dialog.
+## API Endpoints
+- `/`: Serves the loan application form (GET)
+- `/predict`: Makes a loan risk prediction (POST)
+- `/health`: Health check endpoint (GET)
 
-## Customization
+## User Interface
 
-### Styling
+The application features a user-friendly interface for loan applications. Here are some screenshots of the UI:
+<p float="left">
+  <img src="./images/ui/first_page.png" width="200" />
+  <img src="./images/ui/second_page.png" width="200" />
+  <img src="./images/ui/third_page.png" width="200" />
+</p>
+<p float="left">
+  <img src="./images/ui/approved_loan.png" width="200" />
+  <img src="./images/ui/rejected_loan.png" width="200" />
+</p>
 
-The form uses CSS variables for easy customization. To modify the color scheme, edit the following variables in the `<style>` section of `index.html`:
 
-```css
-:root {
-    --background-color: #EEECE2;
-    --card-color: #FFFFFF;
-    --text-color: #000000;
-    --primary-color: #CC7B5C;
-    --secondary-color: #9C8AA5;
-    --accent-color: #91A694;
-    --border-color: #E5E4DF;
-    --progress-color: #91A694;
-    --error-color: #FF6B6B;
-}
-```
 
-### Form Fields
-
-To add or remove form fields:
-
-1. Modify the HTML structure within the `<form>` element in `index.html`
-2. Update the `validateStep` function in `script.js` to include any new validation rules
-3. Adjust the `submitApplication` function to handle new form data if necessary
-
-## Backend Integration
-
-The form is designed to work with a backend service that accepts POST requests to the `/predict` endpoint. Ensure your backend service:
-
-1. Accepts JSON payload
-2. Returns a JSON response with at least the following fields:
-   - `loan_approval`: "Approved" or "Rejected"
-   - `monthly_payment`: (number) if approved
-
-## Browser Compatibility
-
-This form is compatible with modern web browsers, including:
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License.
+## Future Improvements
+1. Incorporate additional data sources beyond the application data
+2. Explore advanced ensemble techniques
+3. Consider adding features like AMT_CREDIT_SUM_DEBT from the "bureau.csv" file
+4. Further refine the financial analysis based on industry feedback
+5. Continuously monitor and update anomaly detection thresholds
+6. Conduct more extensive testing on edge cases to quantify the improvements from manual fine-tuning
