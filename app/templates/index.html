@@ -573,6 +573,14 @@
             } else {
               hideError(field);
             }
+          } else if (field.id === 'loan_term_years') {
+            const loanTerm = parseInt(field.value);
+            if (isNaN(loanTerm) || loanTerm < 1 || loanTerm > 30) {
+              isValid = false;
+              showError(field, 'Please enter a valid loan term between 1 and 30 years');
+            } else {
+              hideError(field);
+            }
           } else if (field.type === 'number' && field.value !== '') {
             const value = parseFloat(field.value);
             if (isNaN(value) || value < 0) {

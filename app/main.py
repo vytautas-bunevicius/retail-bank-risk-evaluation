@@ -238,9 +238,9 @@ def preprocess_input(
                 df = df.drop(columns=["age"])
                 logger.info(
                     "Converted age to days_birth: %s days",
-                    df["days_birth"].iloc[
+                    df["days_birth"].iloc[ # pylint: disable=unsubscriptable-object
                         0
-                    ],  # pylint: disable=unsubscriptable-object
+                    ],
                 )
             else:
                 logger.error(
@@ -622,7 +622,7 @@ async def predict(request: Request) -> PredictionResponse:
     except ValueError as ve:
         logger.error("ValueError during prediction: %s", str(ve))
         return JSONResponse(status_code=400, content={"detail": str(ve)})
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         logger.error("Error during prediction: %s", str(e))
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
