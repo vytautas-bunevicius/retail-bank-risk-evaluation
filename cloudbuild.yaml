@@ -1,0 +1,26 @@
+# cloudbuild.yaml
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/retail-bank-risk/retail-bank-risk-app:$BUILD_ID', '.']
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/retail-bank-risk/retail-bank-risk-app:$BUILD_ID']
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+    - 'run'
+    - 'deploy'
+    - 'retail-bank-risk-app'
+    - '--image'
+    - 'gcr.io/retail-bank-risk/retail-bank-risk-app:$BUILD_ID'
+    - '--region'
+    - 'us-central1'
+    - '--platform'
+    - 'managed'
+    - '--allow-unauthenticated'
+    - '--set-env-vars'
+    - 'MODEL_PATH=/app/models/tuned_tuned_xgboost_checkpoint.pkl'
+images:
+  - 'gcr.io/retail-bank-risk/retail-bank-risk-app:$BUILD_ID'
