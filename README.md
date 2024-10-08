@@ -110,7 +110,7 @@ Top features influencing the model's predictions include:
 ## Installation Guide
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.10+
 - pip
 - virtualenv (optional but recommended)
 
