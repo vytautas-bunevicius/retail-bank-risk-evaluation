@@ -134,7 +134,6 @@ def create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
         df, "amt_annuity", "amt_income_total"
     )
 
-    # Optional future features
     # df["ext_source_mean"] = df[["ext_source_2", "ext_source_3"]].mean(axis=1)
     df["credit_exceeds_goods"] = (df["amt_credit"] > df["amt_goods_price"]).astype(int)
 
