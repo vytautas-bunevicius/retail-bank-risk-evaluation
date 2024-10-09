@@ -1,6 +1,6 @@
 # Introduction
 
-    This Jupyter Book presents a comprehensive analysis and development of machine learning models for evaluating default risk in retail banking, using the Home Credit Group dataset.
+This Jupyter Book presents a comprehensive analysis and development of machine learning models for evaluating default risk in retail banking, using the Home Credit Group dataset.
 
    ## Contents
 
