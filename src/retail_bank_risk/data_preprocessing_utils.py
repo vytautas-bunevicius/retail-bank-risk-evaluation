@@ -65,18 +65,14 @@ def reduce_memory_usage_pl(
         col_type = df[col].dtype
 
         if col_type in numeric_int_types:
-            c_min = df[col].min().item()
-            c_max = df[col].max().item()
+            c_min = df[col].min()
+            c_max = df[col].max()
 
             if np.iinfo(np.int8).min <= c_min <= c_max <= np.iinfo(np.int8).max:
                 new_type = pl.Int8
-            elif np.iinfo(np.int16).min <= c_min <= c_max <= np.iinfo(
-                np.int16
-            ).max:
+            elif np.iinfo(np.int16).min <= c_min <= c_max <= np.iinfo(np.int16).max:
                 new_type = pl.Int16
-            elif np.iinfo(np.int32).min <= c_min <= c_max <= np.iinfo(
-                np.int32
-            ).max:
+            elif np.iinfo(np.int32).min <= c_min <= c_max <= np.iinfo(np.int32).max:
                 new_type = pl.Int32
             else:
                 new_type = pl.Int64
@@ -85,13 +81,9 @@ def reduce_memory_usage_pl(
                 df = df.with_columns(pl.col(col).cast(new_type))
 
         elif col_type in numeric_float_types:
-            c_min = df[col].min().item()
-            c_max = df[col].max().item()
-            if (
-                np.finfo(np.float32).min <= c_min <= c_max <= np.finfo(
-                    np.float32
-                ).max
-            ):
+            c_min = df[col].min()
+            c_max = df[col].max()
+            if np.finfo(np.float32).min <= c_min <= c_max <= np.finfo(np.float32).max:
                 df = df.with_columns(pl.col(col).cast(pl.Float32))
 
         elif col_type == pl.Utf8:
