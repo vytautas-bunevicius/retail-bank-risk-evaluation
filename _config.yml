@@ -1,0 +1,19 @@
+title: Retail Bank Risk Evaluation
+author: Vytautas Bunevičius
+logo:
+
+execute:
+  execute_notebooks: "cache"
+
+repository:
+  url: https://github.com/vytautas-bunevicius/retail-bank-risk-evaluation
+  path_to_book: notebooks
+
+launch_buttons:
+  notebook_interface: "jupyterlab"
+  binderhub_url: "https://mybinder.org"
+  thebe: false
+
+sphinx:
+  config:
+    html_theme: sphinx_book_theme

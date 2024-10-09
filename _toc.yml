@@ -1,0 +1,17 @@
+format: jb-book
+root: intro
+parts:
+  - caption: Getting Started (Data Loading and Preprocessing)
+    chapters:
+      - file: notebooks/01_data_loading_and_preprocessing
+  - caption: Feature Selection and Data Analysis
+    chapters:
+      - file: notebooks/02_feature_selection_and_preparation
+      - file: notebooks/03_exploratory_data_analysis
+  - caption: Feature Engineering and Model Development
+    chapters:
+      - file: notebooks/04_feature_engineering
+      - file: notebooks/05_model_training_and_evaluation
+  - caption: Conclusion
+    chapters:
+      - file: conclusion
