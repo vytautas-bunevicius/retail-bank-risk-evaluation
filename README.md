@@ -127,21 +127,40 @@ Top features influencing the model's predictions include:
    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
    ```
 
-3. Install the required dependencies:
+3. Install the project and its dependencies:
    ```
-   pip install -r requirements.txt
-   ```
-
-4. Set up environment variables:
-   - Create a `.env` file in the root directory
-   - Add necessary environment variables (e.g., `MODEL_PATH`, `DEBUG_MODE`)
-
-5. Run the application:
-   ```
-   python main.py
+   pip install -e .
    ```
 
-The application should now be running on `http://localhost:8080`.
+## Running the Application
+
+To run the application, use the following command:
+
+```
+uvicorn app.main:app
+```
+
+This command:
+- Uses `uvicorn` to run the FastAPI application
+- Specifies `app.main:app` as the application import string, where:
+  - `app.main` is the Python module path
+  - `app` is the FastAPI application instance within that module
+
+By default, this will run the server on `http://127.0.0.1:8000`. If you need to specify a different host or port, you can use the `--host` and `--port` options:
+
+```
+uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
+
+## Note on Dependencies
+
+The `setup.py` file in this project is configured to read and install dependencies from `requirements.txt`. When you run `pip install -e .`, it installs both the project and all dependencies listed in `requirements.txt`.
+
+If you make changes to `requirements.txt`, you may need to run `pip install -e .` again to update the installed dependencies.
+
+## Pydantic Deprecation Warnings
+
+You may see deprecation warnings related to Pydantic validators. These are not errors, but suggestions to update to the newer Pydantic V2 style validators. Consider updating these in future maintenance of the project.
 
 ## Deployment
 
