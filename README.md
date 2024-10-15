@@ -13,10 +13,14 @@
 8. [Installation Guide](#installation-guide)
    - [Prerequisites](#prerequisites)
    - [Steps](#steps)
-9. [Deployment](#deployment)
-10. [API Endpoints](#api-endpoints)
-11. [User Interface](#user-interface)
-12. [Future Improvements](#future-improvements)
+9. [Running the Application](#running-the-application)
+10. [Jupyter Book](#jupyter-book)
+11. [Note on Dependencies](#note-on-dependencies)
+12. [Pydantic Deprecation Warnings](#pydantic-deprecation-warnings)
+13. [Deployment](#deployment)
+14. [API Endpoints](#api-endpoints)
+15. [User Interface](#user-interface)
+16. [Future Improvements](#future-improvements)
 
 ## Project Overview
 This project focuses on developing, deploying, and serving a machine learning model for credit risk prediction using the Home Credit dataset. The goal is to create an interpretable, deployable, and financially sound model that effectively identifies potential loan defaulters while maintaining a balance between precision and recall.
@@ -152,6 +156,24 @@ By default, this will run the server on `http://127.0.0.1:8000`. If you need to 
 uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
+## Jupyter Book
+
+To view all notebooks in one place, you can run the Jupyter Book in the root directory. Follow these steps:
+
+1. Ensure you have Jupyter Book installed (you should if you have installed the requirements.txt):
+   ```
+   pip install jupyter-book
+   ```
+
+2. Build the book:
+   ```
+   jupyter-book build .
+   ```
+
+3. Open the generated `_build/html/index.html` file in your web browser to view the compiled book.
+
+This Jupyter Book provides a comprehensive view of all project notebooks, making it easier to navigate and understand the entire workflow.
+
 ## Note on Dependencies
 
 The `setup.py` file in this project is configured to read and install dependencies from `requirements.txt`. When you run `pip install -e .`, it installs both the project and all dependencies listed in `requirements.txt`.
@@ -199,8 +221,6 @@ The application features a user-friendly interface for loan applications. Here a
   <img src="./images/ui/approved_loan.png" width="200" />
   <img src="./images/ui/rejected_loan.png" width="200" />
 </p>
-
-
 
 ## Future Improvements
 1. Incorporate additional data sources beyond the application data
