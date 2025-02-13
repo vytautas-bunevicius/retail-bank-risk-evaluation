@@ -3,14 +3,15 @@ This module provides utility functions for statistical analysis of features
 in a dataset, particularly for binary classification problems.
 """
 
-from typing import List, Dict, Tuple, Optional
 import warnings
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
 import pandas.api.types as pdt
+from joblib import Parallel, delayed
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
-from joblib import Parallel, delayed
 from tqdm.notebook import tqdm
 
 

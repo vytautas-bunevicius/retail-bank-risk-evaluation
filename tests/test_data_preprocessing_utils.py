@@ -26,29 +26,29 @@ Note: Some tests may be skipped if they raise exceptions, which could
 indicate incompatibilities or issues with the underlying functions.
 """
 
-import pytest
-import polars as pl
-import pandas as pd
 import numpy as np
+import pandas as pd
+import polars as pl
+import pytest
+from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
 
 from retail_bank_risk.data_preprocessing_utils import (
-    reduce_memory_usage_pl,
-    initial_feature_reduction,
-    impute_numerical_features,
-    impute_categorical_features,
-    count_duplicated_rows,
-    detect_anomalies_iqr,
-    flag_anomalies,
-    calculate_cramers_v,
-    get_top_missing_value_percentages,
     analyze_missing_values,
+    calculate_cliff_delta,
+    calculate_cramers_v,
     confidence_interval,
+    count_duplicated_rows,
     create_pipeline,
     create_stratified_sample,
-    calculate_cliff_delta,
+    detect_anomalies_iqr,
+    flag_anomalies,
+    get_top_missing_value_percentages,
+    impute_categorical_features,
+    impute_numerical_features,
+    initial_feature_reduction,
+    reduce_memory_usage_pl,
 )
 
 

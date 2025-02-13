@@ -30,22 +30,22 @@ Note: Some tests may be skipped if they raise exceptions, indicating potential
 issues with the underlying functions.
 """
 
-from typing import Any, Dict, List
-from unittest.mock import patch, MagicMock
-
 import unittest
-import pytest
+from typing import Any, Dict, List
+from unittest.mock import MagicMock, patch
+
 import numpy as np
+import pytest
 
 from retail_bank_risk.advanced_visualizations_utils import (
-    shap_summary_plot_cycled,
-    shap_force_plot,
-    plot_model_performance,
     plot_combined_confusion_matrices,
-    plot_roc_curve,
-    plot_precision_recall_curve,
     plot_confusion_matrix,
     plot_learning_curve,
+    plot_model_performance,
+    plot_precision_recall_curve,
+    plot_roc_curve,
+    shap_force_plot,
+    shap_summary_plot_cycled,
 )
 
 

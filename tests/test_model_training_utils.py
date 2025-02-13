@@ -34,27 +34,27 @@ Note: Some tests use mocking to simulate external dependencies and
 ensure proper interaction with optimization libraries.
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+from lightgbm import LGBMClassifier
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
 
 from retail_bank_risk.model_training_utils import (
     downscale_dtypes,
-    sanitize_feature_names,
-    validate_data,
+    extract_feature_importances,
     get_model_and_params,
-    train_and_evaluate,
+    load_checkpoint,
+    load_progress,
     objective,
     optimize_hyperparameters,
+    sanitize_feature_names,
     save_checkpoint,
-    load_checkpoint,
     save_progress,
-    load_progress,
-    extract_feature_importances,
+    train_and_evaluate,
+    validate_data,
 )
 
 

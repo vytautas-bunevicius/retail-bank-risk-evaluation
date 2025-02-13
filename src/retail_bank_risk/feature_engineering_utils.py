@@ -21,12 +21,12 @@ Functions:
         target_column: str = "") -> Tuple[pd.DataFrame, pd.DataFrame]
 """
 import re
-from typing import List, Tuple, Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from category_encoders import LeaveOneOutEncoder, OneHotEncoder
-from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 
 
 def bin_age_into_groups(df: pd.DataFrame, age_column: str) -> pd.Series:

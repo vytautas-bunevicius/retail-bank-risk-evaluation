@@ -30,18 +30,16 @@ interpretability and performance visualization are essential. The plots
 generated can be displayed interactively or saved for reporting purposes.
 """
 
-from typing import List, Optional, Dict, Any
 import math
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from sklearn.metrics import confusion_matrix, precision_recall_curve, roc_curve
 from sklearn.model_selection import learning_curve
-
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
 
 BACKGROUND_COLOR = "#EEECE2"
 PRIMARY_COLORS = ["#CC7B5C", "#D4A27F", "#EBDBBC", "#9C8AA5"]

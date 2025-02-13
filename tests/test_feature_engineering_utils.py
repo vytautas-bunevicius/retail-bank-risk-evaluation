@@ -32,19 +32,19 @@ exceptions are raised under certain conditions.
 
 from typing import List
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 from retail_bank_risk.feature_engineering_utils import (
     bin_age_into_groups,
     bin_numeric_into_quantiles,
-    create_binned_features,
     calculate_ratio,
-    create_derived_features,
-    engineer_features,
-    encode_categorical_features,
     clean_column_names,
+    create_binned_features,
+    create_derived_features,
+    encode_categorical_features,
+    engineer_features,
 )
 
 

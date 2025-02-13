@@ -37,19 +37,20 @@ The tests cover various scenarios, including:
 Note: Some tests use pytest.approx for floating-point comparisons to
 account for small numerical differences.
 """
-from typing import Tuple, Optional, List
+from typing import List, Optional, Tuple
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
+
 from retail_bank_risk.statistical_analysis_utils import (
-    vectorized_cliff_delta,
+    analyze_feature,
     bootstrap_cliff_delta,
     bootstrap_cramers_v,
-    simulate_p_value,
-    analyze_feature,
-    run_statistical_analysis,
     diagnose_target,
+    run_statistical_analysis,
+    simulate_p_value,
+    vectorized_cliff_delta,
 )
 
 

@@ -20,19 +20,19 @@ of the loan risk evaluation system across various use cases and potential
 error scenarios.
 """
 
-import sys
 import os
-from unittest import mock
+import sys
 from typing import Any, Dict, Generator
+from unittest import mock
 
 import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi.testclient import TestClient #pylint: disable=C0413
-import numpy as np #pylint: disable=C0413
+import numpy as np  #pylint: disable=C0413
+from fastapi.testclient import TestClient  #pylint: disable=C0413
 
-from app.main import app, PredictionResponse #pylint: disable=C0413
+from app.main import PredictionResponse, app  #pylint: disable=C0413
 
 
 @pytest.fixture

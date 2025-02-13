@@ -21,26 +21,26 @@ performance and interpret feature importance.
 """
 
 import os
+import pickle
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import pickle
 import lightgbm as lgb
 import numpy as np
 import optuna
-from optuna import Trial
-from optuna.storages import RDBStorage
 import pandas as pd
 import xgboost as xgb
+from focal_loss import BinaryFocalLoss
+from optuna import Trial
+from optuna.storages import RDBStorage
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     f1_score,
+    fbeta_score,
     precision_score,
     recall_score,
     roc_auc_score,
-    fbeta_score,
 )
 from sklearn.pipeline import FunctionTransformer, Pipeline
-from focal_loss import BinaryFocalLoss
 
 
 def evaluate_model(

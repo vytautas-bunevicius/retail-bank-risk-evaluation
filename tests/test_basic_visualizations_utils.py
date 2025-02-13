@@ -24,20 +24,20 @@ module, ensuring these functions behave as expected with sample data.
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
 from typing import Dict
+from unittest.mock import MagicMock, patch
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from retail_bank_risk.basic_visualizations_utils import (
-    plot_combined_histograms,
+    plot_categorical_features_by_target,
     plot_combined_bar_charts,
     plot_combined_boxplots,
+    plot_combined_histograms,
     plot_correlation_matrix,
-    plot_feature_importances,
     plot_distribution_comparison,
-    plot_categorical_features_by_target,
+    plot_feature_importances,
     plot_numeric_distributions,
     plot_single_bar_chart,
 )
