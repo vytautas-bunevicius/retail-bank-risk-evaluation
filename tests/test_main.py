@@ -212,7 +212,7 @@ def test_predict_anomalies_detected(
         fixture_mock_model_predict_proba (mock.MagicMock): The mocked model.
     """
     input_data: Dict[str, Any] = {
-        "amt_income_total": 5000000.0,  # Large income to trigger anomaly
+        "amt_income_total": 5000000.0,
         "amt_credit": 15000.0,
         "amt_goods_price": 10000.0,
         "name_income_type": "Working",
@@ -340,7 +340,7 @@ def test_predict_non_binary_flags(fixture_client: TestClient) -> None: #pylint: 
     response = fixture_client.post("/predict", json=input_data)
     if response.status_code != 500:
         print("Non-Binary Flags Response:", response.json())
-    assert response.status_code == 500  # Adjusted to match application behavior
+    assert response.status_code == 500
     error_response = response.json()
     assert "detail" in error_response
 

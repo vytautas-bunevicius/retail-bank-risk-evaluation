@@ -87,7 +87,7 @@ def shap_summary_plot_cycled(
     colors = []
     for i in range(num_features):
         if i < quartiles[0]:
-            colors.append(PRIMARY_COLORS[3])  # Reversed color order
+            colors.append(PRIMARY_COLORS[3])
         elif i < quartiles[1]:
             colors.append(PRIMARY_COLORS[2])
         elif i < quartiles[2]:
@@ -104,7 +104,6 @@ def shap_summary_plot_cycled(
         labels={"importance": "Mean(|SHAP value|)", "feature": "Feature"},
     )
 
-    # Set the marker colors for the entire trace
     fig.update_traces(marker_color=colors)
 
     fig.update_layout(

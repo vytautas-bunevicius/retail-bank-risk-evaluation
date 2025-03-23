@@ -114,7 +114,6 @@ def plot_combined_histograms(
             tickfont={**axis_font, "size": 12},
         )
 
-        # Remove y-axis title for all but the first subplot
         if i == 0:
             fig.update_yaxes(
                 title_text="Percentage",

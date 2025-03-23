@@ -382,7 +382,7 @@ def test_run_statistical_analysis_basic(
         "corrected_p_value",
     ]
     assert list(result_df.columns) == expected_columns
-    assert len(result_df) > 0  # Ensure there is at least one result
+    assert len(result_df) > 0
 
 
 def test_run_statistical_analysis_nonexistent_target(

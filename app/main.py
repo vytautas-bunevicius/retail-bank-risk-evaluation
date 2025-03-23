@@ -468,7 +468,7 @@ def adjust_default_probability(
         float: Adjusted probability of default.
     """
     adjustment_factor = (
-        0.05  # Reduced from 0.10 to make the adjustment less aggressive
+        0.05
     )
     adjusted_prob = original_prob + (adjustment_factor * debt_to_income_ratio)
     return min(adjusted_prob, 1.0)
