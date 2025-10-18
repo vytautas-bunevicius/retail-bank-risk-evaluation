@@ -207,16 +207,6 @@ By default, this will run the server on `http://127.0.0.1:8000`. If you need to 
 uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
-## Note on Dependencies
-
-The `setup.py` file in this project is configured to read and install dependencies from `requirements.txt`. When you run `pip install -e .`, it installs both the project and all dependencies listed in `requirements.txt`.
-
-If you make changes to `requirements.txt`, you may need to run `pip install -e .` again to update the installed dependencies.
-
-## Pydantic Deprecation Warnings
-
-You may see deprecation warnings related to Pydantic validators. These are not errors, but suggestions to update to the newer Pydantic V2 style validators. Consider updating these in future maintenance of the project.
-
 ## Deployment
 
 The application is deployed on Google Cloud Platform using Cloud Run. To deploy your own instance:
