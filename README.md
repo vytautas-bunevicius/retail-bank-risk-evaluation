@@ -152,11 +152,13 @@ Top features influencing the model's predictions include:
    .venv\Scripts\activate     # On Windows
    ```
 
-4. **Install Dependencies:**
+4. **Sync Dependencies:**
 
    ```bash
-   uv pip install -r requirements.txt
+   uv sync
    ```
+
+   This installs all dependencies from `pyproject.toml` and sets up the project for development.
 
 ### Using pip (Alternative)
 
@@ -176,11 +178,13 @@ Top features influencing the model's predictions include:
    venv\Scripts\activate     # On Windows
    ```
 
-3. **Install Dependencies:**
+3. **Install the Package in Editable Mode:**
 
    ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
+
+   This installs the project and all its dependencies as defined in `pyproject.toml`.
 
 ## Running the Application
 
